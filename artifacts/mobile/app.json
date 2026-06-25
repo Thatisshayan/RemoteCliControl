@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "RemoteCTRL",
+    "slug": "remotectrl",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "remotectrl",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.remotectrl.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0d0d0d"
+      },
+      "package": "com.remotectrl.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ]
+  }
+}

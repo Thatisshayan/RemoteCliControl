@@ -1,0 +1,670 @@
+openapi: 3.0.3
+info:
+  title: RemoteCliControl API
+  description: API specification for managing SSH connections, sessions, files, processes, and commands.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+
+paths:
+  /connection:
+    get:
+      summary: Get the default connection config
+      operationId: getConnection
+      tags: [connection]
+      responses:
+        "200":
+          description: Current connection config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionConfig"
+        "404":
+          description: No connection configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: Save or update the default connection config
+      operationId: saveConnection
+      tags: [connection]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionConfig"
+      responses:
+        "200":
+          description: Saved connection config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionConfig"
+
+  /connection/test:
+    post:
+      summary: Test an SSH connection
+      operationId: testConnection
+      tags: [connection]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionConfig"
+      responses:
+        "200":
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestResult"
+
+  /connections:
+    get:
+      summary: List all saved connection profiles
+      operationId: listConnections
+      tags: [connections]
+      responses:
+        "200":
+          description: List of connection profiles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConnectionProfile"
+    post:
+      summary: Create a new connection profile
+      operationId: createConnection
+      tags: [connections]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, host, port, username, password]
+              properties:
+                name:
+                  type: string
+                host:
+                  type: string
+                port:
+                  type: integer
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "201":
+          description: Created connection profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionProfile"
+
+  /connections/active:
+    get:
+      summary: Get the active connection profile
+      operationId: getActiveConnection
+      tags: [connections]
+      responses:
+        "200":
+          description: Active connection profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionProfile"
+        "404":
+          description: No active connection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /connections/{id}:
+    delete:
+      summary: Delete a connection profile
+      operationId: deleteConnection
+      tags: [connections]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /connections/{id}/activate:
+    post:
+      summary: Set a connection profile as active
+      operationId: activateConnection
+      tags: [connections]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Activated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /sessions:
+    get:
+      summary: List all sessions
+      operationId: listSessions
+      tags: [sessions]
+      responses:
+        "200":
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Session"
+    post:
+      summary: Create a new SSH session
+      operationId: createSession
+      tags: [sessions]
+      responses:
+        "201":
+          description: Created session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /sessions/{id}:
+    delete:
+      summary: Close and delete a session
+      operationId: deleteSession
+      tags: [sessions]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session closed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update a session title
+      operationId: updateSession
+      tags: [sessions]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:
+                  type: string
+      responses:
+        "200":
+          description: Updated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /files:
+    get:
+      summary: List files at a path
+      operationId: listFiles
+      tags: [files]
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Remote directory path
+      responses:
+        "200":
+          description: Directory listing
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [path, items]
+                properties:
+                  path:
+                    type: string
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/FileItem"
+    delete:
+      summary: Delete a file or directory
+      operationId: deleteFile
+      tags: [files]
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Remote file or directory path
+      responses:
+        "200":
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Path not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /files/download:
+    get:
+      summary: Download a file
+      operationId: downloadFile
+      tags: [files]
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Remote file path
+      responses:
+        "200":
+          description: File content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /files/read:
+    get:
+      summary: Read a file as text
+      operationId: readFile
+      tags: [files]
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Remote file path
+      responses:
+        "200":
+          description: File content
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [content]
+                properties:
+                  content:
+                    type: string
+        "404":
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /files/mkdir:
+    post:
+      summary: Create a directory
+      operationId: mkdir
+      tags: [files]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [path]
+              properties:
+                path:
+                  type: string
+      responses:
+        "201":
+          description: Directory created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "409":
+          description: Directory already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /files/upload:
+    post:
+      summary: Upload a file
+      operationId: uploadFile
+      tags: [files]
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Destination directory path
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: File uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /processes:
+    get:
+      summary: List remote processes
+      operationId: listProcesses
+      tags: [processes]
+      responses:
+        "200":
+          description: List of processes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RemoteProcess"
+
+  /processes/{pid}:
+    delete:
+      summary: Kill a remote process
+      operationId: killProcess
+      tags: [processes]
+      parameters:
+        - name: pid
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Process killed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Process not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /commands:
+    get:
+      summary: List saved commands
+      operationId: listCommands
+      tags: [commands]
+      responses:
+        "200":
+          description: List of saved commands
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SavedCommand"
+    post:
+      summary: Save a command
+      operationId: createCommand
+      tags: [commands]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [label, command]
+              properties:
+                label:
+                  type: string
+                command:
+                  type: string
+                description:
+                  type: string
+      responses:
+        "201":
+          description: Saved command
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedCommand"
+
+  /commands/{id}:
+    delete:
+      summary: Delete a saved command
+      operationId: deleteCommand
+      tags: [commands]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Command not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /health:
+    get:
+      summary: Health check
+      operationId: healthCheck
+      tags: [system]
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+
+components:
+  schemas:
+    ConnectionConfig:
+      type: object
+      required: [host, port, username, password]
+      properties:
+        host:
+          type: string
+        port:
+          type: integer
+        username:
+          type: string
+        password:
+          type: string
+
+    ConnectionProfile:
+      allOf:
+        - $ref: "#/components/schemas/ConnectionConfig"
+        - type: object
+          required: [id, name]
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+
+    Session:
+      type: object
+      required: [id, title, status, createdAt]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+          enum: [connecting, connected, disconnected, error]
+        createdAt:
+          type: string
+          format: date-time
+
+    FileItem:
+      type: object
+      required: [name, path, type, size, modifiedAt, permissions]
+      properties:
+        name:
+          type: string
+        path:
+          type: string
+        type:
+          type: string
+          enum: [file, directory, symlink]
+        size:
+          type: number
+        modifiedAt:
+          type: string
+          format: date-time
+        permissions:
+          type: string
+
+    RemoteProcess:
+      type: object
+      required: [pid, name, cpu, memory, status, user]
+      properties:
+        pid:
+          type: integer
+        name:
+          type: string
+        cpu:
+          type: number
+        memory:
+          type: number
+        status:
+          type: string
+          enum: [running, "not responding"]
+        user:
+          type: string
+
+    SavedCommand:
+      type: object
+      required: [id, label, command, description]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        command:
+          type: string
+        description:
+          type: string
+
+    TestResult:
+      type: object
+      required: [success, message, latencyMs]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        latencyMs:
+          type: number
+
+    SuccessResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string

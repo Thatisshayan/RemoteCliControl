@@ -1,0 +1,16 @@
+{
+  "name": "@remotectrl/api-client-react",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@remotectrl/api-zod": "workspace:*",
+    "@tanstack/react-query": "^5.0.0"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-native": "*"
+  }
+}

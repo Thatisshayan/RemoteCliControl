@@ -1,0 +1,10 @@
+{
+  "name": "remotectrl",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:server": "cd artifacts/api-server && pnpm dev",
+    "dev:mobile": "cd artifacts/mobile && pnpm start",
+    "build:server": "cd artifacts/api-server && pnpm build"
+  }
+}
