@@ -8,7 +8,9 @@ import { useListFiles, useDeleteFile, useMakeDirectory, useReadFile } from "@rem
 import { colors } from "../../constants/colors";
 import type { FileItem } from "@remotectrl/api-zod";
 
-const DOMAIN = process.env.EXPO_PUBLIC_DOMAIN || "localhost:3000";
+const DOMAIN_RAW = process.env.EXPO_PUBLIC_DOMAIN || "http://localhost:3000";
+const DOMAIN = DOMAIN_RAW.replace(/^https?:\/\//, "");
+const BASE_URL = DOMAIN_RAW.startsWith("http") ? DOMAIN_RAW : `http://${DOMAIN_RAW}`;
 
 export default function FilesScreen() {
   const [currentPath, setCurrentPath] = useState("/");
@@ -76,7 +78,7 @@ export default function FilesScreen() {
   const handleDownload = async (item: FileItem) => {
     setDownloading(true);
     try {
-      const url = `http://${DOMAIN}/api/files/download?path=${encodeURIComponent(item.path)}`;
+      const url = `${BASE_URL}/api/files/download?path=${encodeURIComponent(item.path)}`;
       const localUri = FileSystem.documentDirectory + item.name;
       await FileSystem.downloadAsync(url, localUri);
       if (await Sharing.isAvailableAsync()) {
@@ -100,7 +102,7 @@ export default function FilesScreen() {
       const remotePath = currentPath.endsWith("/") ? currentPath + filename : currentPath + "/" + filename;
       const formData = new FormData();
       formData.append("file", { uri: asset.uri, name: filename, type: asset.mimeType || "application/octet-stream" } as any);
-      await fetch(`http://${DOMAIN}/api/files/upload?path=${encodeURIComponent(remotePath)}`, {
+      await fetch(`${BASE_URL}/api/files/upload?path=${encodeURIComponent(remotePath)}`, {
         method: "POST",
         body: formData,
       });

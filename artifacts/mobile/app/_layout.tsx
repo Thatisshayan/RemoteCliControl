@@ -11,8 +11,9 @@ import ErrorBoundary from "../components/ErrorBoundary";
 import { setBaseUrl } from "@remotectrl/api-client-react";
 import { colors } from "../constants/colors";
 
-const domain = process.env.EXPO_PUBLIC_DOMAIN || "localhost:3000";
-setBaseUrl(`http://${domain}`);
+const domain = process.env.EXPO_PUBLIC_DOMAIN || "http://localhost:3000";
+const baseUrl = domain.startsWith("http") ? domain : `http://${domain}`;
+setBaseUrl(baseUrl);
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },

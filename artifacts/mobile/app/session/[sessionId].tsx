@@ -6,7 +6,8 @@ import * as KeepAwake from "expo-keep-awake";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colors } from "../../constants/colors";
 
-const DOMAIN = process.env.EXPO_PUBLIC_DOMAIN || "localhost:3000";
+const DOMAIN_RAW = process.env.EXPO_PUBLIC_DOMAIN || "http://localhost:3000";
+const DOMAIN = DOMAIN_RAW.replace(/^https?:\/\//, "");
 
 // ANSI color parser
 const ANSI_COLORS: Record<number, string> = {
@@ -88,7 +89,8 @@ export default function SessionScreen() {
 
   const openWs = useCallback(() => {
     if (!sessionId) return;
-    const protocol = Platform.OS === "web" && location.protocol === "https:" ? "wss:" : "ws:";
+    const isHttps = DOMAIN_RAW.startsWith("https") || (Platform.OS === "web" && location.protocol === "https:");
+    const protocol = isHttps ? "wss:" : "ws:";
     const url = `${protocol}//${DOMAIN}/api/ws/terminal/${sessionId}`;
     const ws = new WebSocket(url);
     wsRef.current = ws;
