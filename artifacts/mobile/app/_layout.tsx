@@ -8,6 +8,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
 import * as SplashScreen from "expo-splash-screen";
 import { KeyboardProvider } from "react-native-keyboard-controller";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { setBaseUrl, setApiToken } from "@remotectrl/api-client-react";
 import { colors } from "../constants/colors";
@@ -15,26 +16,31 @@ import { colors } from "../constants/colors";
 const domain = process.env.EXPO_PUBLIC_DOMAIN || "http://localhost:3000";
 const baseUrl = domain.startsWith("http") ? domain : `http://${domain}`;
 setBaseUrl(baseUrl);
-setApiToken(process.env.EXPO_PUBLIC_API_TOKEN);
+if (process.env.EXPO_PUBLIC_API_TOKEN) {
+  setApiToken(process.env.EXPO_PUBLIC_API_TOKEN);
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      onError: (e: any) => {
-        Alert.alert("Request failed", e?.message ?? "Unexpected error");
-      },
-    },
-    mutations: {
-      onError: (e: any) => {
-        Alert.alert("Action failed", e?.message ?? "Unexpected error");
-      },
     },
   },
 });
 
 SplashScreen.preventAutoHideAsync();
+
+async function loadAsyncStorageOverrides() {
+  const [savedUrl, savedToken] = await Promise.all([
+    AsyncStorage.getItem("server-url"),
+    AsyncStorage.getItem("api-token"),
+  ]);
+  if (savedUrl) setBaseUrl(savedUrl);
+  if (savedToken) setApiToken(savedToken);
+}
+
+loadAsyncStorageOverrides();
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
@@ -57,6 +63,7 @@ export default function RootLayout() {
                   contentStyle: { backgroundColor: colors.background },
                 }}
               >
+                <Stack.Screen name="onboarding" />
                 <Stack.Screen name="(tabs)" />
                 <Stack.Screen name="session/[sessionId]" options={{ presentation: "fullScreenModal" }} />
                 <Stack.Screen name="connection" options={{ presentation: "modal" }} />

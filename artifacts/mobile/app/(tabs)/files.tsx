@@ -1,16 +1,32 @@
 import { useState, useCallback } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, TextInput, ActivityIndicator, Modal } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, TextInput, ActivityIndicator, Modal, ScrollView } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
 import { useListFiles, useDeleteFile, useMakeDirectory, useReadFile } from "@remotectrl/api-client-react";
+import Card from "../../components/ui/Card";
+import EmptyState from "../../components/ui/EmptyState";
+import LoadingState from "../../components/ui/LoadingState";
+import ActionSheet from "../../components/ui/ActionSheet";
 import { colors } from "../../constants/colors";
 import type { FileItem } from "@remotectrl/api-zod";
 
 const DOMAIN_RAW = process.env.EXPO_PUBLIC_DOMAIN || "http://localhost:3000";
-const DOMAIN = DOMAIN_RAW.replace(/^https?:\/\//, "");
 const BASE_URL = DOMAIN_RAW.startsWith("http") ? DOMAIN_RAW : `http://${DOMAIN_RAW}`;
+
+const BINARY_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".mp4", ".zip", ".exe", ".pdf", ".bin", ".dll", ".so", ".dmg", ".iso"]);
+
+function isBinary(name: string): boolean {
+  const ext = name.toLowerCase().slice(name.lastIndexOf("."));
+  return BINARY_EXTENSIONS.has(ext);
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
 
 export default function FilesScreen() {
   const [currentPath, setCurrentPath] = useState("/");
@@ -21,6 +37,7 @@ export default function FilesScreen() {
   const [previewName, setPreviewName] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
 
   const { data, isLoading, refetch } = useListFiles(currentPath);
   const deleteFile = useDeleteFile();
@@ -34,6 +51,11 @@ export default function FilesScreen() {
     }
   };
 
+  const navigateTo = (path: string) => {
+    setPathHistory((prev) => [...prev, currentPath]);
+    setCurrentPath(path);
+  };
+
   const goBack = () => {
     if (pathHistory.length > 0) {
       const prev = pathHistory[pathHistory.length - 1];
@@ -43,26 +65,16 @@ export default function FilesScreen() {
   };
 
   const handleDelete = (item: FileItem) => {
-    Alert.alert("Delete", `Delete "${item.name}"?`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => deleteFile.mutateAsync(item.path) },
-    ]);
-  };
-
-  const handleLongPress = (item: FileItem) => {
-    if (item.type === "directory") {
-      handleDelete(item);
-    } else {
-      Alert.alert(item.name, "Choose an action", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Preview", onPress: () => handlePreview(item) },
-        { text: "Download", onPress: () => handleDownload(item) },
-        { text: "Delete", style: "destructive", onPress: () => handleDelete(item) },
-      ]);
-    }
+    setSelectedFile(null);
+    deleteFile.mutateAsync(item.path).then(() => refetch());
   };
 
   const handlePreview = async (item: FileItem) => {
+    setSelectedFile(null);
+    if (isBinary(item.name)) {
+      Alert.alert("Binary File", "Binary file — download to view");
+      return;
+    }
     setPreviewLoading(true);
     setPreviewName(item.name);
     try {
@@ -76,6 +88,7 @@ export default function FilesScreen() {
   };
 
   const handleDownload = async (item: FileItem) => {
+    setSelectedFile(null);
     setDownloading(true);
     try {
       const url = `${BASE_URL}/api/files/download?path=${encodeURIComponent(item.path)}`;
@@ -128,21 +141,10 @@ export default function FilesScreen() {
   };
 
   const breadcrumbs = currentPath.split("/").filter(Boolean);
-
-  const renderItem = ({ item }: { item: FileItem }) => (
-    <TouchableOpacity style={styles.row} onPress={() => navigateInto(item)} onLongPress={() => handleLongPress(item)}>
-      <Feather
-        name={item.type === "directory" ? "folder" : item.type === "symlink" ? "link" : "file"}
-        size={20}
-        color={item.type === "directory" ? colors.primary : colors.mutedForeground}
-      />
-      <View style={styles.rowInfo}>
-        <Text style={styles.rowName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.rowMeta}>{item.type === "directory" ? "Folder" : formatSize(item.size)} {item.modifiedAt ? "· " + new Date(item.modifiedAt).toLocaleDateString() : ""}</Text>
-      </View>
-      {item.type === "directory" && <Feather name="chevron-right" size={18} color={colors.mutedForeground} />}
-    </TouchableOpacity>
-  );
+  const items = (data?.items || []) as FileItem[];
+  const directories = items.filter((i) => i.type === "directory");
+  const files = items.filter((i) => i.type !== "directory");
+  const sorted = [...directories, ...files];
 
   return (
     <View style={styles.container}>
@@ -155,11 +157,6 @@ export default function FilesScreen() {
           <TouchableOpacity onPress={() => setShowMkdir(!showMkdir)}>
             <Feather name="folder-plus" size={22} color={colors.foreground} />
           </TouchableOpacity>
-          {pathHistory.length > 0 && (
-            <TouchableOpacity onPress={goBack}>
-              <Feather name="arrow-left" size={22} color={colors.foreground} />
-            </TouchableOpacity>
-          )}
         </View>
       </View>
 
@@ -168,14 +165,15 @@ export default function FilesScreen() {
           <Text style={[styles.breadItem, currentPath === "/" && styles.breadActive]}>/</Text>
         </TouchableOpacity>
         {breadcrumbs.map((seg, i) => (
-          <TouchableOpacity key={i} onPress={() => {
-            const newPath = "/" + breadcrumbs.slice(0, i + 1).join("/");
-            setPathHistory((prev) => [...prev, currentPath]);
-            setCurrentPath(newPath);
-          }}>
+          <TouchableOpacity key={i} onPress={() => navigateTo("/" + breadcrumbs.slice(0, i + 1).join("/"))}>
             <Text style={[styles.breadItem, i === breadcrumbs.length - 1 && styles.breadActive]}>{seg}/</Text>
           </TouchableOpacity>
         ))}
+        {pathHistory.length > 0 && (
+          <TouchableOpacity onPress={goBack} style={styles.backBreadcrumb}>
+            <Feather name="arrow-left" size={14} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {showMkdir && (
@@ -195,18 +193,51 @@ export default function FilesScreen() {
       )}
 
       {isLoading ? (
-        <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
+        <LoadingState count={5} />
       ) : (
         <FlatList
-          data={(data?.items || []) as FileItem[]}
+          data={sorted}
           keyExtractor={(item) => item.path}
-          renderItem={renderItem}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.row}
+              onPress={() => navigateInto(item)}
+              onLongPress={() => setSelectedFile(item)}
+            >
+              <Feather
+                name={item.type === "directory" ? "folder" : "file"}
+                size={20}
+                color={item.type === "directory" ? colors.primary : colors.mutedForeground}
+              />
+              <View style={styles.rowInfo}>
+                <Text style={styles.rowName} numberOfLines={1}>{item.name}</Text>
+                <Text style={styles.rowMeta}>
+                  {item.type === "directory" ? "Folder" : formatSize(item.size)}
+                  {item.modifiedAt ? ` · ${new Date(item.modifiedAt).toLocaleDateString()}` : ""}
+                </Text>
+              </View>
+              {item.type === "directory" && <Feather name="chevron-right" size={18} color={colors.mutedForeground} />}
+            </TouchableOpacity>
+          )}
           contentContainerStyle={styles.list}
           onRefresh={() => refetch()}
           refreshing={false}
-          ListEmptyComponent={<Text style={styles.empty}>Empty directory</Text>}
+          ListEmptyComponent={<EmptyState icon="folder" message="Empty directory" />}
         />
       )}
+
+      <ActionSheet
+        visible={selectedFile !== null}
+        title={selectedFile?.name}
+        items={[
+          ...(selectedFile?.type !== "directory"
+            ? [{ label: "Preview", icon: "eye" as const, onPress: () => { if (selectedFile) handlePreview(selectedFile); } }
+            ] : []),
+          { label: "Download", icon: "download" as const, onPress: () => { if (selectedFile) handleDownload(selectedFile); } },
+          { label: "Delete", icon: "trash-2" as const, destructive: true, onPress: () => { if (selectedFile) handleDelete(selectedFile); } },
+        ]}
+        onCancel={() => setSelectedFile(null)}
+      />
 
       <Modal visible={previewLoading || previewContent !== null} animationType="slide" onRequestClose={() => { setPreviewContent(null); setPreviewName(null); }}>
         <View style={styles.modalContainer}>
@@ -231,20 +262,15 @@ export default function FilesScreen() {
   );
 }
 
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, paddingTop: 50 },
   headerTitle: { color: colors.foreground, fontSize: 24, fontWeight: "700", fontFamily: "Inter_700Bold" },
   headerActions: { flexDirection: "row", gap: 16 },
-  breadcrumb: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 16, paddingBottom: 8, gap: 2 },
+  breadcrumb: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 16, paddingBottom: 8, gap: 2, alignItems: "center" },
   breadItem: { color: colors.mutedForeground, fontSize: 14, fontFamily: "Inter_400Regular" },
   breadActive: { color: colors.primary },
+  backBreadcrumb: { marginLeft: 8 },
   mkdirRow: { flexDirection: "row", padding: 16, gap: 8 },
   mkdirInput: { flex: 1, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, color: colors.foreground, fontFamily: "Inter_400Regular" },
   mkdirBtn: { backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 16, justifyContent: "center" },

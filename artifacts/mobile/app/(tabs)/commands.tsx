@@ -1,9 +1,13 @@
 import { useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Modal, TextInput } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { useGetCommands, useCreateCommand, useDeleteCommand, useGetSessions } from "@remotectrl/api-client-react";
+import Card from "../../components/ui/Card";
+import Badge from "../../components/ui/Badge";
+import EmptyState from "../../components/ui/EmptyState";
+import ActionSheet from "../../components/ui/ActionSheet";
 import { colors } from "../../constants/colors";
 import type { SavedCommand, Session } from "@remotectrl/api-zod";
 
@@ -18,79 +22,33 @@ export default function CommandsScreen() {
   const [label, setLabel] = useState("");
   const [command, setCommand] = useState("");
   const [description, setDescription] = useState("");
+  const [selectedCmd, setSelectedCmd] = useState<SavedCommand | null>(null);
 
   const handleCopy = async (cmd: SavedCommand) => {
     await Clipboard.setStringAsync(cmd.command);
-    Alert.alert("Copied", "Command copied to clipboard");
+    setSelectedCmd(null);
   };
 
   const handleSend = (cmd: SavedCommand) => {
+    setSelectedCmd(null);
     const activeSessions = (sessions || []) as Session[];
-    if (activeSessions.length === 0) {
-      Alert.alert("No Sessions", "Create a terminal session first");
-      return;
-    }
-    if (activeSessions.length === 1) {
-      router.push(`/session/${activeSessions[0].id}?prefill=${encodeURIComponent(cmd.command)}`);
-      return;
-    }
-    Alert.alert(
-      "Send to Session",
-      "Choose a session:",
-      activeSessions.map((s) => ({
-        text: s.title,
-        onPress: () => router.push(`/session/${s.id}?prefill=${encodeURIComponent(cmd.command)}`),
-      })).concat([{ text: "Cancel", style: "cancel" as const }])
-    );
-  };
-
-  const handleCardPress = (cmd: SavedCommand) => {
-    Alert.alert(cmd.label, cmd.command, [
-      { text: "Copy", onPress: () => handleCopy(cmd) },
-      ...(sessions && (sessions as Session[]).length > 0
-        ? [{ text: "Send to Session", onPress: () => handleSend(cmd) }]
-        : []),
-      { text: "Cancel", style: "cancel" as const },
-    ]);
+    if (activeSessions.length === 0) return;
+    router.push(`/session/${activeSessions[0].id}?prefill=${encodeURIComponent(cmd.command)}`);
   };
 
   const handleDelete = (cmd: SavedCommand) => {
-    Alert.alert("Delete", `Delete "${cmd.label}"?`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => deleteCommand.mutateAsync(cmd.id) },
-    ]);
+    setSelectedCmd(null);
+    deleteCommand.mutateAsync(cmd.id);
   };
 
   const handleSave = async () => {
-    if (!label.trim() || !command.trim()) return Alert.alert("Error", "Label and command are required");
-    try {
-      await createCommand.mutateAsync({ label: label.trim(), command: command.trim(), description: description.trim() });
-      setShowModal(false);
-      setLabel("");
-      setCommand("");
-      setDescription("");
-    } catch (err: any) {
-      Alert.alert("Error", err.message);
-    }
+    if (!label.trim() || !command.trim()) return;
+    await createCommand.mutateAsync({ label: label.trim(), command: command.trim(), description: description.trim() });
+    setShowModal(false);
+    setLabel("");
+    setCommand("");
+    setDescription("");
   };
-
-  const renderItem = ({ item }: { item: SavedCommand }) => (
-    <TouchableOpacity style={styles.card} onPress={() => handleCardPress(item)} onLongPress={() => handleDelete(item)}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.cardLabel}>{item.label}</Text>
-        <View style={styles.cardActions}>
-          <TouchableOpacity onPress={() => handleCopy(item)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Feather name="copy" size={16} color={colors.mutedForeground} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleDelete(item)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Feather name="trash-2" size={16} color={colors.destructive} />
-          </TouchableOpacity>
-        </View>
-      </View>
-      <Text style={styles.cardCommand} numberOfLines={2}>{item.command}</Text>
-      {item.description ? <Text style={styles.cardDesc} numberOfLines={1}>{item.description}</Text> : null}
-    </TouchableOpacity>
-  );
 
   return (
     <View style={styles.container}>
@@ -101,14 +59,41 @@ export default function CommandsScreen() {
       <FlatList
         data={(commands || []) as SavedCommand[]}
         keyExtractor={(c) => c.id}
-        renderItem={renderItem}
+        renderItem={({ item }) => (
+          <Card style={styles.card}>
+            <TouchableOpacity onPress={() => setSelectedCmd(item)} onLongPress={() => setSelectedCmd(item)}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardLabel} numberOfLines={1}>{item.label}</Text>
+                <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+              </View>
+              <Text style={styles.cardCommand} numberOfLines={2}>{item.command}</Text>
+              {item.description ? (
+                <Text style={styles.cardDesc} numberOfLines={1}>{item.description}</Text>
+              ) : null}
+            </TouchableOpacity>
+          </Card>
+        )}
         contentContainerStyle={styles.list}
-        ListEmptyComponent={<Text style={styles.empty}>No saved commands. Tap + to add one.</Text>}
+        ListEmptyComponent={<EmptyState icon="list" message="No saved commands. Tap + to add one." />}
       />
 
       <TouchableOpacity style={styles.fab} onPress={() => setShowModal(true)}>
         <Feather name="plus" size={24} color={colors.primaryForeground} />
       </TouchableOpacity>
+
+      <ActionSheet
+        visible={selectedCmd !== null}
+        title={selectedCmd?.label}
+        message={selectedCmd?.command}
+        items={[
+          { label: "Copy to Clipboard", icon: "copy" as const, onPress: () => { if (selectedCmd) handleCopy(selectedCmd); } },
+          ...((sessions || []).length > 0
+            ? [{ label: "Send to Session", icon: "send" as const, onPress: () => { if (selectedCmd) handleSend(selectedCmd); } }
+            ] : []),
+          { label: "Delete", icon: "trash-2" as const, destructive: true, onPress: () => { if (selectedCmd) handleDelete(selectedCmd); } },
+        ]}
+        onCancel={() => setSelectedCmd(null)}
+      />
 
       <Modal visible={showModal} animationType="slide" transparent onRequestClose={() => setShowModal(false)}>
         <View style={styles.modalOverlay}>
@@ -158,14 +143,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, paddingTop: 50 },
   headerTitle: { color: colors.foreground, fontSize: 24, fontWeight: "700", fontFamily: "Inter_700Bold" },
-  list: { padding: 16 },
-  card: { backgroundColor: colors.card, borderRadius: 10, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: colors.border },
+  list: { padding: 16, paddingBottom: 80 },
+  card: { marginBottom: 8 },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   cardLabel: { color: colors.foreground, fontSize: 16, fontWeight: "600", fontFamily: "Inter_600SemiBold", flex: 1 },
-  cardActions: { flexDirection: "row", gap: 12 },
   cardCommand: { color: colors.primary, fontSize: 14, fontFamily: "Inter_400Regular", marginTop: 6 },
   cardDesc: { color: colors.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 4 },
-  empty: { color: colors.mutedForeground, textAlign: "center", marginTop: 40, fontFamily: "Inter_400Regular" },
   fab: { position: "absolute", bottom: 24, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary, justifyContent: "center", alignItems: "center", elevation: 8 },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
   modalContent: { backgroundColor: colors.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, paddingBottom: 40 },
