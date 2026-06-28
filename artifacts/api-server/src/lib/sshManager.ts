@@ -16,13 +16,15 @@ export interface ActiveSession {
 }
 
 const sessions = new Map<string, ActiveSession>();
+let sessionCounter = 0;
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
 
 function generateTitle(): string {
-  return `Session ${sessions.size + 1}`;
+  sessionCounter += 1;
+  return `Session ${sessionCounter}`;
 }
 
 export function listSessions() {
