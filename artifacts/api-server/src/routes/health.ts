@@ -5,7 +5,7 @@ import { getActiveConnection } from "../lib/store.js";
 const router = Router();
 const startTime = Date.now();
 
-router.get("/health", (_req, res) => {
+router.get("/", (_req, res) => {
   const sessions = listSessions();
   res.json({
     status: "ok",
