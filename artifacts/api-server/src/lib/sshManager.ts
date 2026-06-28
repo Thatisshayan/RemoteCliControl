@@ -16,13 +16,15 @@ export interface ActiveSession {
 }
 
 const sessions = new Map<string, ActiveSession>();
+let sessionCounter = 0;
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
 
 function generateTitle(): string {
-  return `Session ${sessions.size + 1}`;
+  sessionCounter += 1;
+  return `Session ${sessionCounter}`;
 }
 
 export function listSessions() {
@@ -119,7 +121,7 @@ export function createSession(): Promise<{ id: string; title: string; status: st
 export function closeSession(id: string): boolean {
   const session = sessions.get(id);
   if (!session) return false;
-  if (session.shell) session.shell.destroy();
+  if (session.shell) session.shell.end();
   session.client.end();
   sessions.delete(id);
   return true;

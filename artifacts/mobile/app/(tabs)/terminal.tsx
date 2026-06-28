@@ -15,7 +15,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function TerminalScreen() {
   const router = useRouter();
-  const { data: sessions, isLoading } = useGetSessions();
+  const { data: sessions, isLoading } = useGetSessions({ refetchInterval: 5000 });
   const createSession = useCreateSession();
   const closeSession = useCloseSession();
   const renameSession = useRenameSession();

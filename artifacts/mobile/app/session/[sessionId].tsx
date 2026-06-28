@@ -47,10 +47,12 @@ function parseAnsi(text: string): AnsiSegment[] {
 
 const MAX_HISTORY = 100;
 
+const MAX_LINES = 5000;
+
 export default function SessionScreen() {
   const router = useRouter();
   const { sessionId, prefill } = useLocalSearchParams<{ sessionId: string; prefill?: string }>();
-  const [output, setOutput] = useState("");
+  const [lines, setLines] = useState<string[]>([]);
   const [input, setInput] = useState("");
   const [connected, setConnected] = useState(false);
   const [reconnectStatus, setReconnectStatus] = useState("");
@@ -102,7 +104,10 @@ export default function SessionScreen() {
     };
 
     ws.onmessage = (e) => {
-      setOutput((prev) => prev + e.data);
+      setLines((prev) => {
+        const next = [...prev, ...e.data.split("\n")];
+        return next.length > MAX_LINES ? next.slice(-MAX_LINES) : next;
+      });
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 50);
     };
 
@@ -163,10 +168,9 @@ export default function SessionScreen() {
     }
   };
 
-  const clearOutput = () => setOutput("");
+  const clearOutput = () => setLines([]);
 
-  const renderAnsi = (text: string) => {
-    const lines = text.split("\n");
+  const renderAnsi = () => {
     return lines.map((line, i) => {
       const segments = parseAnsi(line);
       return (
@@ -197,8 +201,8 @@ export default function SessionScreen() {
       </View>
 
       <ScrollView ref={scrollRef} style={styles.outputContainer} contentContainerStyle={styles.outputContent}>
-        {output ? (
-          renderAnsi(output)
+        {lines.length > 0 ? (
+          renderAnsi()
         ) : (
           <Text style={styles.placeholder}>Waiting for output...</Text>
         )}

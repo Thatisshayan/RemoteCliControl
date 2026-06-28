@@ -3,37 +3,45 @@ const require = createRequire(import.meta.url);
 const { WebSocketServer } = require("ws") as typeof import("ws");
 
 import type { Server } from "http";
-import { addOutputListener, sendToSession, getSession } from "./sshManager.js";
+import { addOutputListener, getSession } from "./sshManager.js";
 import logger from "./logger.js";
 
 export function setupWebSocket(server: Server) {
   const wss = new WebSocketServer({ noServer: true });
 
   server.on("upgrade", (request, socket, head) => {
-    const url = request.url || "";
-    // Parse: /api/ws/terminal/:sessionId
-    const match = url.match(/^\/api\/ws\/terminal\/(.+)$/);
-    if (!match) {
+    const url = new URL(request.url || "", "http://localhost");
+    const sessionId = url.pathname.match(/^\/api\/ws\/terminal\/(.+)$/)?.[1];
+
+    if (!sessionId) {
       socket.destroy();
       return;
     }
-    const sessionId = match[1];
+
+    const token = url.searchParams.get("token");
+    const API_TOKEN = process.env.API_TOKEN;
+    if (API_TOKEN && token !== API_TOKEN) {
+      socket.destroy();
+      return;
+    }
 
     wss.handleUpgrade(request, socket, head, (ws) => {
       wss.emit("connection", ws, { sessionId });
     });
   });
 
+  const connections = new Map<any, { sessionId: string; alive: boolean }>();
+
   wss.on("connection", (ws: any, req: { sessionId: string }) => {
     const { sessionId } = req;
-    const session = getSession(sessionId);
 
-    if (!session) {
+    if (!getSession(sessionId)) {
       ws.close(4004, "Session not found");
       return;
     }
 
     logger.info({ sessionId }, "WebSocket connected");
+    connections.set(ws, { sessionId, alive: true });
 
     const removeListener = addOutputListener(sessionId, (data: string) => {
       if (ws.readyState === 1) {
@@ -41,20 +49,39 @@ export function setupWebSocket(server: Server) {
       }
     });
 
-    ws.on("message", (msg: any) => {
-      const data = typeof msg === "string" ? msg : msg.toString();
-      sendToSession(sessionId, data);
+    ws.on("message", () => {
+      const entry = connections.get(ws);
+      if (entry) entry.alive = true;
     });
 
     ws.on("close", () => {
       logger.info({ sessionId }, "WebSocket closed");
+      connections.delete(ws);
       removeListener();
     });
 
     ws.on("error", () => {
+      connections.delete(ws);
       removeListener();
     });
   });
+
+  setInterval(() => {
+    for (const [ws, entry] of connections.entries()) {
+      if (ws.readyState !== 1) {
+        connections.delete(ws);
+        continue;
+      }
+      if (!entry.alive) {
+        logger.info({ sessionId: entry.sessionId }, "WebSocket ping timeout, closing");
+        ws.close();
+        connections.delete(ws);
+        continue;
+      }
+      entry.alive = false;
+      try { ws.ping(); } catch {}
+    }
+  }, 30000);
 
   logger.info("WebSocket server mounted at /api/ws/terminal");
 }
