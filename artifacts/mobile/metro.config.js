@@ -13,4 +13,11 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, "node_modules"),
 ];
 
+// Resolve .js imports from workspace TypeScript packages to their .ts source
+config.resolver.sourceExts = [
+  ...config.resolver.sourceExts,
+  "mjs",
+  "cjs",
+];
+
 module.exports = config;
