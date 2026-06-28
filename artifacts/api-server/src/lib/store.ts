@@ -19,10 +19,26 @@ interface SavedCommand {
   description: string;
 }
 
+export interface PushDevice {
+  id: string;
+  pushToken: string;
+  platform: "ios" | "android";
+  deviceName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationPreferences {
+  sessionDisconnected: boolean;
+  serverHealthChange: boolean;
+}
+
 interface StoreState {
   connections: ConnectionProfile[];
   activeConnectionId: string | null;
   commands: SavedCommand[];
+  pushDevices: PushDevice[];
+  notificationPreferences: NotificationPreferences;
 }
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -41,7 +57,7 @@ function loadState(): StoreState {
   } catch (e) {
     // corrupted or missing
   }
-  return { connections: [], activeConnectionId: null, commands: [] };
+  return { connections: [], activeConnectionId: null, commands: [], pushDevices: [], notificationPreferences: { sessionDisconnected: true, serverHealthChange: true } };
 }
 
 let state: StoreState = loadState();
@@ -136,4 +152,48 @@ export function removeCommand(id: string): boolean {
   state.commands.splice(idx, 1);
   persist();
   return true;
+}
+
+// Push devices
+export function getPushDevices(): PushDevice[] {
+  return state.pushDevices;
+}
+
+export function registerPushDevice(pushToken: string, platform: "ios" | "android", deviceName?: string): PushDevice {
+  const existing = state.pushDevices.find((d) => d.pushToken === pushToken);
+  if (existing) {
+    existing.updatedAt = new Date().toISOString();
+    if (deviceName) existing.deviceName = deviceName;
+    persist();
+    return existing;
+  }
+  const device: PushDevice = {
+    id: generateId(),
+    pushToken,
+    platform,
+    deviceName,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  state.pushDevices.push(device);
+  persist();
+  return device;
+}
+
+export function removePushDevice(id: string): boolean {
+  const idx = state.pushDevices.findIndex((d) => d.id === id);
+  if (idx === -1) return false;
+  state.pushDevices.splice(idx, 1);
+  persist();
+  return true;
+}
+
+export function getNotificationPreferences(): NotificationPreferences {
+  return state.notificationPreferences;
+}
+
+export function updateNotificationPreferences(prefs: Partial<NotificationPreferences>): NotificationPreferences {
+  state.notificationPreferences = { ...state.notificationPreferences, ...prefs };
+  persist();
+  return state.notificationPreferences;
 }

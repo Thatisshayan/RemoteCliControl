@@ -12,6 +12,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { setBaseUrl, setApiToken } from "@remotectrl/api-client-react";
 import { colors } from "../constants/colors";
+import { registerForPushNotifications, setupNotificationHandler } from "../lib/notifications";
 
 const domain = process.env.EXPO_PUBLIC_DOMAIN || "http://localhost:3000";
 const baseUrl = domain.startsWith("http") ? domain : `http://${domain}`;
@@ -41,6 +42,9 @@ async function loadAsyncStorageOverrides() {
 }
 
 loadAsyncStorageOverrides();
+
+registerForPushNotifications().catch(() => {});
+setupNotificationHandler();
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });

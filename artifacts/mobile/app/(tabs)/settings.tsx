@@ -16,12 +16,21 @@ export default function SettingsScreen() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
   const [health, setHealth] = useState<{ tunnelUrl?: string; uptimeSeconds?: number; activeSessions?: number } | null>(null);
+  const [pushPerms, setPushPerms] = useState<{ sessionDisconnected: boolean; serverHealthChange: boolean } | null>(null);
 
   const fetchHealth = useCallback(async () => {
     try {
       const base = getBaseUrl();
       const res = await fetch(`${base}/health`, { signal: AbortSignal.timeout(3000) });
       if (res.ok) setHealth(await res.json());
+    } catch {}
+  }, []);
+
+  const fetchPushPreferences = useCallback(async () => {
+    try {
+      const base = getBaseUrl();
+      const res = await fetch(`${base}/api/push/preferences`, { signal: AbortSignal.timeout(3000) });
+      if (res.ok) setPushPerms(await res.json());
     } catch {}
   }, []);
 
@@ -35,9 +44,10 @@ export default function SettingsScreen() {
       }
     });
     fetchHealth();
+    fetchPushPreferences();
     const interval = setInterval(fetchHealth, 30_000);
     return () => clearInterval(interval);
-  }, [fetchHealth]);
+  }, [fetchHealth, fetchPushPreferences]);
 
   const handleSaveUrl = async () => {
     const url = serverUrl.replace(/\/+$/, "");
@@ -78,6 +88,30 @@ export default function SettingsScreen() {
     const clamped = Math.max(8, Math.min(20, val));
     setFontSizeState(clamped);
     await AsyncStorage.setItem("terminal-font-size", String(clamped));
+  };
+
+  const handlePushPrefToggle = async (key: string, value: boolean) => {
+    try {
+      const base = getBaseUrl();
+      const res = await fetch(`${base}/api/push/preferences`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [key]: value }),
+      });
+      if (res.ok) setPushPerms(await res.json());
+    } catch {}
+  };
+
+  const handlePushPreferenceToggle = async (key: "sessionDisconnected" | "serverHealthChange", val: boolean) => {
+    setPushPerms((prev) => prev ? { ...prev, [key]: val } : { sessionDisconnected: true, serverHealthChange: true });
+    try {
+      const base = getBaseUrl();
+      await fetch(`${base}/api/push/preferences`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [key]: val }),
+      });
+    } catch {}
   };
 
   const handleClearData = () => {
@@ -174,6 +208,30 @@ export default function SettingsScreen() {
             trackColor={{ false: colors.border, true: colors.primary }}
             thumbColor={colors.foreground}
           />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Push Notifications</Text>
+        <View style={styles.serverCard}>
+          <View style={styles.serverRow}>
+            <Text style={styles.serverLabel}>Session Disconnected</Text>
+            <Switch
+              value={pushPerms?.sessionDisconnected ?? true}
+              onValueChange={(v) => handlePushPreferenceToggle("sessionDisconnected", v)}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.foreground}
+            />
+          </View>
+          <View style={styles.serverRow}>
+            <Text style={styles.serverLabel}>Server Health Changes</Text>
+            <Switch
+              value={pushPerms?.serverHealthChange ?? true}
+              onValueChange={(v) => handlePushPreferenceToggle("serverHealthChange", v)}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.foreground}
+            />
+          </View>
         </View>
       </View>
 
