@@ -10,14 +10,20 @@ export function setupWebSocket(server: Server) {
   const wss = new WebSocketServer({ noServer: true });
 
   server.on("upgrade", (request, socket, head) => {
-    const url = request.url || "";
-    // Parse: /api/ws/terminal/:sessionId
-    const match = url.match(/^\/api\/ws\/terminal\/(.+)$/);
-    if (!match) {
+    const url = new URL(request.url || "", "http://localhost");
+    const sessionId = url.pathname.match(/^\/api\/ws\/terminal\/(.+)$/)?.[1];
+
+    if (!sessionId) {
       socket.destroy();
       return;
     }
-    const sessionId = match[1];
+
+    const token = url.searchParams.get("token");
+    const API_TOKEN = process.env.API_TOKEN;
+    if (API_TOKEN && token !== API_TOKEN) {
+      socket.destroy();
+      return;
+    }
 
     wss.handleUpgrade(request, socket, head, (ws) => {
       wss.emit("connection", ws, { sessionId });

@@ -8,12 +8,13 @@ import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_7
 import * as SplashScreen from "expo-splash-screen";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import ErrorBoundary from "../components/ErrorBoundary";
-import { setBaseUrl } from "@remotectrl/api-client-react";
+import { setBaseUrl, setApiToken } from "@remotectrl/api-client-react";
 import { colors } from "../constants/colors";
 
 const domain = process.env.EXPO_PUBLIC_DOMAIN || "http://localhost:3000";
 const baseUrl = domain.startsWith("http") ? domain : `http://${domain}`;
 setBaseUrl(baseUrl);
+setApiToken(process.env.EXPO_PUBLIC_API_TOKEN);
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },

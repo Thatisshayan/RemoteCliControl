@@ -119,7 +119,7 @@ export function createSession(): Promise<{ id: string; title: string; status: st
 export function closeSession(id: string): boolean {
   const session = sessions.get(id);
   if (!session) return false;
-  if (session.shell) session.shell.destroy();
+  if (session.shell) session.shell.end();
   session.client.end();
   sessions.delete(id);
   return true;

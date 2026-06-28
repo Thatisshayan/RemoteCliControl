@@ -31,6 +31,9 @@ router.get("/processes", async (_req, res) => {
 
 router.delete("/processes/:pid", async (req, res) => {
   try {
+    if (!/^\d+$/.test(req.params.pid)) {
+      return res.status(400).json({ error: "Invalid PID" });
+    }
     const pid = req.params.pid;
     await execCommand(`powershell.exe -NoProfile -Command "Stop-Process -Id ${pid} -Force"`);
     res.json({ success: true });

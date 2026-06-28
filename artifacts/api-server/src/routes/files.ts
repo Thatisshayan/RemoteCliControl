@@ -2,12 +2,29 @@ import { Router } from "express";
 import multer from "multer";
 import { getSftp, execCommand } from "../lib/sshManager.js";
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+
+function sanitizePath(p: string): string {
+  if (p.includes("..")) {
+    throw new Error("Invalid path");
+  }
+  return p;
+}
+
+function validatePath(p: string): string | null {
+  if (!p.startsWith("/")) return "Path must start with /";
+  if (p.length > 4096) return "Path too long";
+  if (p.includes("\0")) return "Path contains null bytes";
+  return null;
+}
 
 router.get("/files/download", async (req, res) => {
   const filePath = req.query.path as string;
   if (!filePath) return res.status(400).json({ error: "path required" });
   try {
+    sanitizePath(filePath);
+    const err = validatePath(filePath);
+    if (err) return res.status(400).json({ error: err });
     const { sftp, client } = await getSftp();
     const stat = await new Promise<any>((resolve, reject) => {
       sftp.stat(filePath, (err: any, s: any) => err ? reject(err) : resolve(s));
@@ -29,6 +46,9 @@ router.get("/files/read", async (req, res) => {
   const filePath = req.query.path as string;
   if (!filePath) return res.status(400).json({ error: "path required" });
   try {
+    sanitizePath(filePath);
+    const err = validatePath(filePath);
+    if (err) return res.status(400).json({ error: err });
     const { sftp, client } = await getSftp();
     const stat = await new Promise<any>((resolve, reject) => {
       sftp.stat(filePath, (err: any, s: any) => err ? reject(err) : resolve(s));
@@ -50,6 +70,9 @@ router.get("/files/read", async (req, res) => {
 router.get("/files", async (req, res) => {
   const dirPath = (req.query.path as string) || "/";
   try {
+    sanitizePath(dirPath);
+    const err = validatePath(dirPath);
+    if (err) return res.status(400).json({ error: err });
     const { sftp, client } = await getSftp();
     const list = await new Promise<any[]>((resolve, reject) => {
       sftp.readdir(dirPath, (err: any, list: any[]) => err ? reject(err) : resolve(list));
@@ -88,6 +111,9 @@ router.post("/files/mkdir", async (req, res) => {
   const { path: dirPath } = req.body;
   if (!dirPath) return res.status(400).json({ error: "path required" });
   try {
+    sanitizePath(dirPath);
+    const err = validatePath(dirPath);
+    if (err) return res.status(400).json({ error: err });
     const { sftp, client } = await getSftp();
     await new Promise<void>((resolve, reject) => {
       sftp.mkdir(dirPath, (err: any) => err ? reject(err) : resolve());
@@ -103,6 +129,9 @@ router.post("/files/upload", upload.single("file"), async (req, res) => {
   const remotePath = req.query.path as string;
   if (!remotePath || !req.file) return res.status(400).json({ error: "path and file required" });
   try {
+    sanitizePath(remotePath);
+    const err = validatePath(remotePath);
+    if (err) return res.status(400).json({ error: err });
     const { sftp, client } = await getSftp();
     await new Promise<void>((resolve, reject) => {
       const stream = sftp.createWriteStream(remotePath);
@@ -121,6 +150,9 @@ router.delete("/files", async (req, res) => {
   const filePath = req.query.path as string;
   if (!filePath) return res.status(400).json({ error: "path required" });
   try {
+    sanitizePath(filePath);
+    const err = validatePath(filePath);
+    if (err) return res.status(400).json({ error: err });
     const { sftp, client } = await getSftp();
     await new Promise<void>((resolve, reject) => {
       sftp.unlink(filePath, (err: any) => {
