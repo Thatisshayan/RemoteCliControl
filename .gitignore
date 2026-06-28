@@ -5,3 +5,6 @@ dist/
 .env
 .env.local
 data/
+*.log
+*.exe
+package-lock.json

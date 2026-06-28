@@ -1,0 +1,13 @@
+services:
+  api-server:
+    build:
+      context: .
+      dockerfile: artifacts/api-server/Dockerfile
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PORT=3000
+      - API_TOKEN=${API_TOKEN:-change_me}
+    restart: unless-stopped
