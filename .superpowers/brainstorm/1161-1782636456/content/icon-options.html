@@ -1,0 +1,71 @@
+<h2>RemoteCTRL App Icon</h2>
+<p class="subtitle">Which direction feels right? The app is a dark-themed remote SSH/terminal manager.</p>
+
+<div class="cards">
+  <div class="card" data-choice="terminal" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0d0d0d;padding:24px;display:flex;justify-content:center;align-items:center;min-height:120px;border-radius:20px;margin-bottom:12px">
+      <svg width="80" height="80" viewBox="0 0 80 80">
+        <rect width="80" height="80" rx="18" fill="#1a1a2e"/>
+        <rect x="16" y="24" width="48" height="32" rx="4" fill="none" stroke="#00ff88" stroke-width="2.5"/>
+        <polyline points="22,34 28,40 22,46" fill="none" stroke="#00ff88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="36" y1="46" x2="52" y2="46" stroke="#00ff88" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="62" cy="18" r="8" fill="#00ff88" opacity="0.3"/>
+        <circle cx="62" cy="18" r="4" fill="#00ff88"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>Terminal Window</h3>
+      <p>A classic terminal with a prompt (<span style="color:#00ff88;">></span>) and a connection indicator dot. Clean, recognizable.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="prompt" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0d0d0d;padding:24px;display:flex;justify-content:center;align-items:center;min-height:120px;border-radius:20px;margin-bottom:12px">
+      <svg width="80" height="80" viewBox="0 0 80 80">
+        <rect width="80" height="80" rx="18" fill="#1a1a2e"/>
+        <text x="22" y="56" font-family="monospace" font-size="36" font-weight="bold" fill="#00ff88">&gt;_</text>
+        <rect x="40" y="32" width="3" height="24" fill="#00ff88">
+          <animate attributeName="opacity" values="1;0;1" dur="1s" repeatCount="indefinite"/>
+        </rect>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>Prompt Cursor</h3>
+      <p>Minimal <span style="color:#00ff88;">&gt;_</span> with blinking cursor. Iconic for developers, instantly reads as "terminal".</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="monogram" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0d0d0d;padding:24px;display:flex;justify-content:center;align-items:center;min-height:120px;border-radius:20px;margin-bottom:12px">
+      <svg width="80" height="80" viewBox="0 0 80 80">
+        <rect width="80" height="80" rx="18" fill="#1a1a2e"/>
+        <text x="12" y="54" font-family="monospace" font-size="36" font-weight="bold" fill="#00ff88">RC</text>
+        <line x1="12" y1="58" x2="68" y2="58" stroke="#00ff88" stroke-width="2" opacity="0.5"/>
+        <circle cx="68" cy="12" r="6" fill="#00ff88" opacity="0.4"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>Monogram "RC"</h3>
+      <p>Stylized letters with an underline accent dot. Brand-forward, works well as a home screen icon.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="globe" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0d0d0d;padding:24px;display:flex;justify-content:center;align-items:center;min-height:120px;border-radius:20px;margin-bottom:12px">
+      <svg width="80" height="80" viewBox="0 0 80 80">
+        <rect width="80" height="80" rx="18" fill="#1a1a2e"/>
+        <circle cx="40" cy="40" r="22" fill="none" stroke="#00ff88" stroke-width="2"/>
+        <path d="M18,40 Q40,18 62,40 Q40,62 18,40" fill="none" stroke="#00ff88" stroke-width="1.5" opacity="0.5"/>
+        <path d="M40,18 L40,62" stroke="#00ff88" stroke-width="1.5" opacity="0.5"/>
+        <path d="M18,40 L62,40" stroke="#00ff88" stroke-width="1.5" opacity="0.5"/>
+        <circle cx="40" cy="40" r="8" fill="#00ff88" opacity="0.2"/>
+        <circle cx="40" cy="40" r="4" fill="#00ff88"/>
+        <path d="M28,28 Q34,34 40,28" fill="none" stroke="#00ff88" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>Globe / Remote</h3>
+      <p>Connected globe inside a terminal frame. Represents "remote access" more literally than the others.</p>
+    </div>
+  </div>
+</div>
