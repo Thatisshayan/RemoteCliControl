@@ -22,6 +22,7 @@
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/icon-android-foreground.png",
         "backgroundColor": "#0d0d0d"
       },
       "package": "com.remotectrl.app"
