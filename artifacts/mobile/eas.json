@@ -3,6 +3,15 @@
     "version": ">= 14.0.0"
   },
   "build": {
+    "ci": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      },
+      "env": {
+        "EXPO_PUBLIC_DOMAIN": "http://localhost:3000"
+      }
+    },
     "development": {
       "developmentClient": true,
       "distribution": "internal",
