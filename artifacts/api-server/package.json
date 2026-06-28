@@ -9,7 +9,7 @@
     "start": "node dist/index.mjs",
     "start:3000": "node -e \"process.env.PORT=3000;import('./dist/index.mjs')\"",
     "start:tray": "tsx src/tray.ts",
-    "bundle:exe": "pnpm exec yao-pkg dist/tray.mjs --targets node20-win-x64 --out-path release/",
+    "bundle:exe": "npx @yao-pkg/pkg dist/tray.mjs --targets node20-win-x64 --out-path release/",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
