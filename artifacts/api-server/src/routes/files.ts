@@ -160,4 +160,20 @@ router.delete("/files", async (req: Request, res: Response, next: NextFunction) 
   }
 });
 
+router.patch("/files/rename", async (req: Request, res: Response, next: NextFunction) => {
+  const { from, to } = req.body;
+  if (!from || !to) return res.status(400).json({ error: "from and to required" });
+  try {
+    sanitizePath(from);
+    sanitizePath(to);
+    const sftp = await getSftp();
+    await new Promise<void>((resolve, reject) => {
+      sftp.rename(from, to, (err: any) => err ? reject(err) : resolve());
+    });
+    res.json({ success: true });
+  } catch (e: any) {
+    next(e);
+  }
+});
+
 export default router;

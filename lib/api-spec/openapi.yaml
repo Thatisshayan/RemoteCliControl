@@ -399,6 +399,37 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /files/rename:
+    patch:
+      summary: Rename a file or directory
+      operationId: renameFile
+      tags: [files]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [from, to]
+              properties:
+                from:
+                  type: string
+                to:
+                  type: string
+      responses:
+        "200":
+          description: Renamed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Source not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /files/upload:
     post:
       summary: Upload a file
