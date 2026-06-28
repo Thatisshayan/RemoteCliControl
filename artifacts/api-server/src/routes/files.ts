@@ -25,7 +25,7 @@ router.get("/files/download", async (req, res) => {
     sanitizePath(filePath);
     const err = validatePath(filePath);
     if (err) return res.status(400).json({ error: err });
-    const { sftp, client } = await getSftp();
+    const sftp = await getSftp();
     const stat = await new Promise<any>((resolve, reject) => {
       sftp.stat(filePath, (err: any, s: any) => err ? reject(err) : resolve(s));
     });
@@ -35,8 +35,7 @@ router.get("/files/download", async (req, res) => {
     res.setHeader("Content-Length", stat.size);
     const stream = sftp.createReadStream(filePath);
     stream.pipe(res);
-    stream.on("close", () => client.end());
-    stream.on("error", (err: any) => { client.end(); res.status(500).json({ error: err.message }); });
+    stream.on("error", (err: any) => res.status(500).json({ error: err.message }));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -49,18 +48,16 @@ router.get("/files/read", async (req, res) => {
     sanitizePath(filePath);
     const err = validatePath(filePath);
     if (err) return res.status(400).json({ error: err });
-    const { sftp, client } = await getSftp();
+    const sftp = await getSftp();
     const stat = await new Promise<any>((resolve, reject) => {
       sftp.stat(filePath, (err: any, s: any) => err ? reject(err) : resolve(s));
     });
     if (stat.size > 100 * 1024) {
-      client.end();
       return res.status(413).json({ error: "File too large (max 100KB)" });
     }
     const content = await new Promise<Buffer>((resolve, reject) => {
       sftp.readFile(filePath, (err: any, data: Buffer) => err ? reject(err) : resolve(data));
     });
-    client.end();
     res.json({ content: content.toString("utf8") });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -73,7 +70,7 @@ router.get("/files", async (req, res) => {
     sanitizePath(dirPath);
     const err = validatePath(dirPath);
     if (err) return res.status(400).json({ error: err });
-    const { sftp, client } = await getSftp();
+    const sftp = await getSftp();
     const list = await new Promise<any[]>((resolve, reject) => {
       sftp.readdir(dirPath, (err: any, list: any[]) => err ? reject(err) : resolve(list));
     });
@@ -100,7 +97,6 @@ router.get("/files", async (req, res) => {
         }
       })
     );
-    client.end();
     res.json({ path: dirPath, items });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -114,11 +110,10 @@ router.post("/files/mkdir", async (req, res) => {
     sanitizePath(dirPath);
     const err = validatePath(dirPath);
     if (err) return res.status(400).json({ error: err });
-    const { sftp, client } = await getSftp();
+    const sftp = await getSftp();
     await new Promise<void>((resolve, reject) => {
       sftp.mkdir(dirPath, (err: any) => err ? reject(err) : resolve());
     });
-    client.end();
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -132,14 +127,13 @@ router.post("/files/upload", upload.single("file"), async (req, res) => {
     sanitizePath(remotePath);
     const err = validatePath(remotePath);
     if (err) return res.status(400).json({ error: err });
-    const { sftp, client } = await getSftp();
+    const sftp = await getSftp();
     await new Promise<void>((resolve, reject) => {
       const stream = sftp.createWriteStream(remotePath);
       stream.on("close", () => resolve());
       stream.on("error", reject);
       stream.end(req.file!.buffer);
     });
-    client.end();
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -153,7 +147,7 @@ router.delete("/files", async (req, res) => {
     sanitizePath(filePath);
     const err = validatePath(filePath);
     if (err) return res.status(400).json({ error: err });
-    const { sftp, client } = await getSftp();
+    const sftp = await getSftp();
     await new Promise<void>((resolve, reject) => {
       sftp.unlink(filePath, (err: any) => {
         if (err) {
@@ -163,7 +157,6 @@ router.delete("/files", async (req, res) => {
         }
       });
     });
-    client.end();
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

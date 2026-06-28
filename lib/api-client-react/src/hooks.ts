@@ -107,6 +107,7 @@ export const useListFiles = (path: string) =>
   useQuery({
     queryKey: keys.files(path),
     queryFn: () => api.get<{ path: string; items: FileItem[] }>("/files", { path }),
+    staleTime: 10_000,
   });
 
 export const useDeleteFile = () => {
