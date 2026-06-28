@@ -140,10 +140,13 @@ jobs:
           node-version: 20
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
+      - name: Install pkg bundler
+        run: npm install -g @yao-pkg/pkg
       - name: Build server
         run: pnpm build:server
       - name: Bundle .exe with pkg
-        run: pnpm --filter api-server bundle:exe
+        run: yao-pkg dist/tray.mjs --targets node20-win-x64 --out-path release/
+        working-directory: artifacts/api-server
       - name: Assemble release folder
         shell: pwsh
         run: |
