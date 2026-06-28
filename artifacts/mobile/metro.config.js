@@ -13,11 +13,17 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, "node_modules"),
 ];
 
-// Resolve .js imports from workspace TypeScript packages to their .ts source
+// Allow Metro to follow pnpm symlinks for workspace packages
+config.resolver.unstable_enableSymlinks = true;
+
+// Ensure TypeScript source files in workspace packages can be resolved
 config.resolver.sourceExts = [
   ...config.resolver.sourceExts,
   "mjs",
   "cjs",
 ];
+
+// Don't bundle these heavy/native modules
+config.resolver.unstable_enablePackageExports = true;
 
 module.exports = config;

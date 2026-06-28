@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UseQueryOptions, UseMutationOptions } from "@tanstack/react-query";
-import { api, getBaseUrl } from "./client.js";
+import { api, getBaseUrl } from "./client";
 import type {
   ConnectionConfig,
   ConnectionProfile,
