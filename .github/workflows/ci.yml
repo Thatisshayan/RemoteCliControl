@@ -94,8 +94,10 @@ jobs:
           node-version: 20
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
       - name: EAS Build
-        run: npx eas build --platform ios --profile preview --non-interactive
+        run: eas build --platform ios --profile preview --non-interactive
         working-directory: artifacts/mobile
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
@@ -115,8 +117,10 @@ jobs:
           node-version: 20
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
       - name: EAS Submit
-        run: npx eas submit --platform ios --profile preview --non-interactive
+        run: eas submit --platform ios --profile preview --non-interactive
         working-directory: artifacts/mobile
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
