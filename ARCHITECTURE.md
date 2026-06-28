@@ -6,21 +6,26 @@ RemoteCTRL is a full-stack mobile SSH control application. A Node.js backend run
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  Phone (Expo Go / compiled APK)                                  │
+│  Phone (iOS App Store / EAS Build)                               │
 │                                                                  │
-│  ┌─────────┐  ┌─────────┐  ┌───────────┐  ┌──────────────────┐ │
-│  │Terminal │  │  Files  │  │ Processes │  │    Commands      │ │
-│  │  tab    │  │   tab   │  │    tab    │  │      tab         │ │
-│  └────┬────┘  └────┬────┘  └─────┬─────┘  └────────┬─────────┘ │
-│       │            │             │                  │           │
-│  ┌────▼────────────▼─────────────▼──────────────────▼─────────┐ │
-│  │         React Query hooks  (@remotectrl/api-client-react)   │ │
-│  └────────────────────────────┬────────────────────────────────┘ │
-└───────────────────────────────│────────────────────────────────┘
+│  ┌─────────┐  ┌─────────┐  ┌───────────┐  ┌────────┐  ┌──────┐│
+│  │Terminal │  │  Files  │  │ Processes │  │Commands│  │Settings│
+│  │  tab    │  │   tab   │  │    tab    │  │  tab   │  │  tab  ││
+│  └────┬────┘  └────┬────┘  └─────┬─────┘  └───┬────┘  └──┬───┘│
+│       │            │             │             │           │     │
+│  ┌────▼────────────▼─────────────▼─────────────▼───────────▼───┐│
+│  │         React Query hooks  (@remotectrl/api-client-react)   ││
+│  └────────────────────────────┬────────────────────────────────┘│
+│                               │                                  │
+│  ┌────────────────────────────▼────────────────────────────┐    │
+│  │  expo-notifications ← Expo Push API                     │    │
+│  │  Session disconnect / server health alerts              │    │
+│  └────────────────────────────┬────────────────────────────┘    │
+└───────────────────────────────│──────────────────────────────────┘
                                 │ HTTP/REST + WebSocket
-                                │ (EXPO_PUBLIC_DOMAIN)
-┌───────────────────────────────▼────────────────────────────────┐
-│  Windows PC — api-server (Node.js 20, Express 5)               │
+                                │ (EXPO_PUBLIC_DOMAIN via Cloudflare Tunnel)
+┌───────────────────────────────▼──────────────────────────────────┐
+│  Windows PC — api-server (Node.js 20, Express 5)                │
 │                                                                  │
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │  app.ts — middleware stack                               │   │
@@ -40,18 +45,27 @@ RemoteCTRL is a full-stack mobile SSH control application. A Node.js backend run
 │  │  • createSession / closeSession / sendToSession           │  │
 │  │  • resizeSession (shell.setWindow)                        │  │
 │  │  • execCommand / getSftp / testConnection                 │  │
-│  └──────────────────────────┬──────────────────────────────┘   │
+│  │  • markUserInitiatedClose (for push notifications)        │  │
+│  └──────────────────────────┬───────────────────────────────┘  │
 │                              │ ssh2                              │
 │  ┌───────────────────────────▼──────────────────────────────┐   │
 │  │  Windows OpenSSH Server (localhost:22)                   │   │
 │  └──────────────────────────────────────────────────────────┘   │
 │                                                                  │
 │  ┌─────────────────┐  ┌─────────────────────────────────────┐   │
-│  │   store.ts      │  │   logger.ts                         │   │
-│  │   data/store.json│  │   pino + pino-http                 │   │
-│  │   connections[] │  │   redact: password/privateKey       │   │
-│  │   commands[]    │  └─────────────────────────────────────┘   │
+│  │   store.ts      │  │   pushNotifications.ts              │   │
+│  │   data/store.json│  │   expo-server-sdk                  │   │
+│  │   connections[] │  │   sendPushToAllDevices()            │   │
+│  │   commands[]    │  │   notifySessionDisconnected()       │   │
+│  │   pushDevices[] │  │   notifyServerStarted()             │   │
+│  │   prefs{}       │  └─────────────────────────────────────┘   │
 │  └─────────────────┘                                            │
+│                                                                  │
+│  ┌─────────────────┐  ┌─────────────────────────────────────┐   │
+│  │   tunnel.ts     │  │   tray.ts                           │   │
+│  │   Cloudflare    │  │   systray2                          │   │
+│  │   Tunnel mgmt   │  │   System tray icon + menu           │   │
+│  └─────────────────┘  └─────────────────────────────────────┘   │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -65,49 +79,77 @@ RemoteCTRL is a full-stack mobile SSH control application. A Node.js backend run
 │   ├── api-server/               ← Express 5 backend
 │   │   ├── src/
 │   │   │   ├── index.ts          ← Entry: requires PORT, starts HTTP + WS
+│   │   │   ├── tray.ts           ← System tray (systray2, spawns server)
 │   │   │   ├── app.ts            ← Express app factory
 │   │   │   ├── lib/
 │   │   │   │   ├── sshManager.ts ← SSH lifecycle + connection pool
 │   │   │   │   ├── wsHandler.ts  ← WebSocket relay + heartbeat
-│   │   │   │   ├── store.ts      ← JSON file persistence
+│   │   │   │   ├── store.ts      ← JSON file persistence (connections, commands, push devices)
 │   │   │   │   ├── auth.ts       ← Bearer token middleware
-│   │   │   │   └── logger.ts     ← Pino with credential redaction
+│   │   │   │   ├── tunnel.ts     ← Cloudflare Tunnel lifecycle
+│   │   │   │   ├── config.ts     ← data/config.json schema
+│   │   │   │   ├── logger.ts     ← Pino with credential redaction
+│   │   │   │   └── pushNotifications.ts ← Expo push send utility
 │   │   │   └── routes/
 │   │   │       ├── health.ts     ← GET /health (auth-exempt)
 │   │   │       ├── connection.ts ← Single-profile + multi-profile endpoints
 │   │   │       ├── sessions.ts   ← SSH session CRUD + rename
 │   │   │       ├── files.ts      ← SFTP operations (18 ops)
 │   │   │       ├── processes.ts  ← PowerShell process manager
-│   │   │       └── commands.ts   ← Saved command library
+│   │   │       ├── commands.ts   ← Saved command library
+│   │   │       └── push.ts       ← Push token registration + preferences
 │   │   ├── src/__tests__/        ← Integration tests
-│   │   ├── src/lib/__tests__/    ← Unit tests (store, auth)
+│   │   ├── src/lib/__tests__/    ← Unit tests (store, auth, push)
 │   │   ├── src/routes/__tests__/ ← Route validation tests
+│   │   ├── installer/            ← Windows Service scripts
 │   │   ├── Dockerfile            ← Multi-stage build
-│   │   ├── build.mjs             ← esbuild config
+│   │   ├── build.mjs             ← esbuild config (index.mjs + tray.mjs)
 │   │   └── vitest.config.ts
-│   └── mobile/                   ← Expo SDK 54 React Native
+│   └── mobile/                   ← Expo SDK 52 React Native
 │       ├── app/
-│       │   ├── _layout.tsx       ← Root: QueryClient, ErrorBoundary, auth headers
+│       │   ├── _layout.tsx       ← Root: QueryClient, ErrorBoundary, push notifications
 │       │   ├── connection.tsx    ← SSH profile manager (list + form)
 │       │   ├── session/
 │       │   │   └── [sessionId].tsx ← Full-screen terminal
+│       │   ├── onboarding/       ← 3-step setup wizard
+│       │   │   ├── index.tsx     ← Welcome
+│       │   │   ├── step2.tsx     ← Backend URL
+│       │   │   └── step3.tsx     ← API Token
 │       │   └── (tabs)/
-│       │       ├── _layout.tsx   ← Tab bar
+│       │       ├── _layout.tsx   ← 5-tab bar
 │       │       ├── terminal.tsx  ← Session list (5s auto-refresh)
 │       │       ├── files.tsx     ← SFTP file browser
 │       │       ├── processes.tsx ← Process manager + search
-│       │       └── commands.tsx  ← Saved commands + send-to-session
+│       │       ├── commands.tsx  ← Saved commands + send-to-session
+│       │       └── settings.tsx  ← Connection, security, push, terminal, server status
+│       ├── components/ui/        ← Shared component library
+│       │   ├── Card.tsx
+│       │   ├── Badge.tsx
+│       │   ├── ActionSheet.tsx
+│       │   ├── SearchBar.tsx
+│       │   ├── EmptyState.tsx
+│       │   └── LoadingState.tsx
+│       ├── lib/
+│       │   └── notifications.ts  ← Push token registration + handler
+│       ├── scripts/
+│       │   └── generate-icons.mjs ← Icon generation from SVG
 │       └── components/
 │           └── ErrorBoundary.tsx ← Per-tab crash recovery
+├── app-store/
+│   ├── metadata.json            ← App Store listing content
+│   └── README.md                ← Submission guide
+├── docs/
+│   ├── privacy-policy.html      ← Privacy policy page
+│   └── support.html             ← Support page
 ├── lib/
-│   ├── api-spec/openapi.yaml     ← Source of truth (18 REST paths)
-│   ├── api-zod/                  ← Zod schemas + TypeScript types (generated)
-│   └── api-client-react/         ← React Query hooks (orval-generated)
-├── .github/workflows/ci.yml      ← CI: lint → test → build
-├── docker-compose.yml            ← Production
-├── docker-compose.dev.yml        ← Development (volume mounts)
-├── .env.example                  ← Backend env template
-└── artifacts/mobile/.env.example ← Mobile env template
+│   ├── api-spec/openapi.yaml    ← Source of truth (21 REST paths)
+│   ├── api-zod/                 ← Zod schemas + TypeScript types (generated)
+│   └── api-client-react/        ← React Query hooks (orval-generated)
+├── .github/workflows/ci.yml     ← CI: matrix + EAS + Slack
+├── docker-compose.yml           ← Production
+├── docker-compose.dev.yml       ← Development (volume mounts)
+├── .env.example                 ← Backend env template
+└── artifacts/mobile/.env.example← Mobile env template
 ```
 
 ---
@@ -129,8 +171,11 @@ Central hub for all SSH activity.
 | `execCommand(cmd)` | Runs one-shot exec via utility client |
 | `getSftp()` | Opens SFTP subsystem via utility client |
 | `testConnection(cfg)` | Connect + immediate disconnect, returns latency ms |
+| `markUserInitiatedClose(id)` | Marks a session close as user-initiated (prevents push notification) |
 
 **Connection pooling:** `utilityClient` is a single persistent SSH connection reused across all `exec` and SFTP calls. On disconnect/error it sets itself to `null` and reconnects on next call. A `utilityQueue` holds pending callers during reconnection.
+
+**Push notifications:** When a session closes unexpectedly (shell close or SSH error), `notifySessionDisconnected()` is called. User-initiated closes (via `closeSession()`) are tracked in a `Set<string>` and skip notification.
 
 ### `wsHandler.ts`
 
@@ -156,11 +201,35 @@ File-backed persistence. State is loaded from `data/store.json` on startup. Ever
 {
   "connections": [{ "id", "name", "host", "port", "username", "password", "privateKey?", "passphrase?" }],
   "activeConnectionId": "string | null",
-  "commands": [{ "id", "label", "command", "description" }]
+  "commands": [{ "id", "label", "command", "description" }],
+  "pushDevices": [{ "id", "pushToken", "platform", "deviceName?", "createdAt", "updatedAt" }],
+  "notificationPreferences": { "sessionDisconnected": true, "serverHealthChange": true }
 }
 ```
 
 Safe exports (`getActiveConnectionSafe`, `getConnectionsSafe`) return `password: "***"` for API responses. Full credentials are only accessed internally by `sshManager.ts`.
+
+### `pushNotifications.ts`
+
+Expo Push API integration. Uses `expo-server-sdk` to send push notifications to registered devices.
+
+| Export | Purpose |
+|--------|---------|
+| `sendPushToAllDevices(title, body, data?)` | Sends push to all registered devices via Expo Push API |
+| `notifySessionDisconnected(sessionTitle, sessionId)` | Sends "Session Disconnected" notification (if preference enabled) |
+| `notifyServerStarted()` | Sends "Server Online" notification (if preference enabled) |
+
+### `tunnel.ts`
+
+Cloudflare Tunnel lifecycle manager. Creates and manages a secure tunnel to expose the local server to the internet.
+
+### `config.ts`
+
+Reads/writes `data/config.json` for persistent settings like tunnel URL and tray preferences.
+
+### `tray.ts`
+
+System tray entry point using `systray2`. Spawns the server as a child process and provides a system tray icon with menu options.
 
 ### `auth.ts`
 
@@ -210,10 +279,14 @@ Run both codegen commands after any change to `openapi.yaml`.
 `.github/workflows/ci.yml` — triggers on every push to every branch:
 
 ```
-lint job        → pnpm --filter api-server tsc --noEmit
-                → pnpm --filter api-server build
-test job        → pnpm --filter api-server test
-build-server    → pnpm build:server + verify dist/index.mjs exists
+lint job (Node 18/20/22)  → pnpm --filter api-server tsc --noEmit
+                           → pnpm --filter api-server build
+test job (Node 18/20/22)  → pnpm --filter api-server test
+build-server (Node 18/20/22) → pnpm build:server + verify dist/index.mjs
+typecheck-mobile (Node 20)  → pnpm --filter @remotectrl/mobile tsc --noEmit
+eas-build (v* tags only)    → npx eas build --platform ios --profile preview
+eas-submit (v* tags only)   → npx eas submit --platform ios --profile preview
+slack-notify (always)       → Posts compact summary to #obsidian-media
 ```
 
 ---

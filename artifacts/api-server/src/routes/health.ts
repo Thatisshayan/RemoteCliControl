@@ -1,9 +1,12 @@
 import { Router } from "express";
 import { listSessions } from "../lib/sshManager.js";
 import { getActiveConnection } from "../lib/store.js";
+import { notifyServerStarted } from "../lib/pushNotifications.js";
 
 const router = Router();
 const startTime = Date.now();
+
+notifyServerStarted().catch(() => {});
 
 router.get("/", (_req, res) => {
   const sessions = listSessions();

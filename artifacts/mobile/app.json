@@ -7,12 +7,22 @@
     "scheme": "remotectrl",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0d0d0d"
+    },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.remotectrl.app"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.remotectrl.app",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "RemoteCTRL uses Face ID to lock the app and protect your server credentials."
+      }
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/icon-android-foreground.png",
         "backgroundColor": "#0d0d0d"
       },
       "package": "com.remotectrl.app"
@@ -23,7 +33,14 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font"
-    ]
+      "expo-font",
+      "expo-local-authentication",
+      "expo-secure-store"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
+    }
   }
 }

@@ -9,7 +9,6 @@ import { colors } from "../../constants/colors";
 const DOMAIN_RAW = process.env.EXPO_PUBLIC_DOMAIN || "http://localhost:3000";
 const DOMAIN = DOMAIN_RAW.replace(/^https?:\/\//, "");
 
-// ANSI color parser
 const ANSI_COLORS: Record<number, string> = {
   30: "#4d4d4d", 31: "#ff4444", 32: "#00ff88", 33: "#ffaa00",
   34: "#5599ff", 35: "#cc44ff", 36: "#00ccff", 37: "#e0e0e0",
@@ -46,7 +45,6 @@ function parseAnsi(text: string): AnsiSegment[] {
 }
 
 const MAX_HISTORY = 100;
-
 const MAX_LINES = 5000;
 
 export default function SessionScreen() {
@@ -64,25 +62,21 @@ export default function SessionScreen() {
   const reconnectAttempts = useRef(0);
   const shouldReconnect = useRef(true);
 
-  // Load persisted font size
   useEffect(() => {
     AsyncStorage.getItem("terminal-font-size").then((v) => {
       if (v) setFontSize(Number(v));
     });
   }, []);
 
-  // Save font size on change
   useEffect(() => {
     AsyncStorage.setItem("terminal-font-size", String(fontSize));
   }, [fontSize]);
 
-  // Keep awake
   useEffect(() => {
     KeepAwake.activateKeepAwakeAsync();
-    return () => { KeepAwake.deactivateKeepAwakeAsync(); };
+    return () => { (KeepAwake as any).deactivateKeepAwake?.().catch(() => {}); };
   }, []);
 
-  // Handle prefill from navigation (e.g., from commands tab)
   useEffect(() => {
     if (prefill) {
       setInput(decodeURIComponent(prefill));
@@ -170,6 +164,10 @@ export default function SessionScreen() {
 
   const clearOutput = () => setLines([]);
 
+  const changeFontSize = (delta: number) => {
+    setFontSize((s) => Math.max(8, Math.min(20, s + delta)));
+  };
+
   const renderAnsi = () => {
     return lines.map((line, i) => {
       const segments = parseAnsi(line);
@@ -192,13 +190,24 @@ export default function SessionScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="chevron-left" size={24} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={styles.sessionId}>{(sessionId || "").slice(-6)}</Text>
         <View style={[styles.statusDot, { backgroundColor: connected ? colors.primary : colors.destructive }]} />
-        {reconnectStatus !== "" && <Text style={styles.reconnectText}>{reconnectStatus}</Text>}
+        <Text style={styles.sessionId} numberOfLines={1}>Session</Text>
+        <TouchableOpacity onPress={() => changeFontSize(-1)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Text style={styles.fontBtn}>A-</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => changeFontSize(1)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Text style={styles.fontBtn}>A+</Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={clearOutput} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Feather name="trash-2" size={18} color={colors.mutedForeground} />
         </TouchableOpacity>
       </View>
+
+      {reconnectStatus !== "" && (
+        <View style={styles.reconnectBanner}>
+          <Text style={styles.reconnectText}>{reconnectStatus}</Text>
+        </View>
+      )}
 
       <ScrollView ref={scrollRef} style={styles.outputContainer} contentContainerStyle={styles.outputContent}>
         {lines.length > 0 ? (
@@ -223,12 +232,6 @@ export default function SessionScreen() {
         </TouchableOpacity>
         <TouchableOpacity style={styles.quickKey} onPress={historyDown}>
           <Feather name="chevron-down" size={18} color={colors.foreground} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.quickKey} onPress={() => setFontSize((s) => Math.max(8, s - 1))}>
-          <Text style={styles.quickKeyText}>A-</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.quickKey} onPress={() => setFontSize((s) => Math.min(20, s + 1))}>
-          <Text style={styles.quickKeyText}>A+</Text>
         </TouchableOpacity>
       </View>
 
@@ -258,11 +261,13 @@ export default function SessionScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: { flexDirection: "row", alignItems: "center", padding: 12, paddingTop: 50, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 10 },
+  header: { flexDirection: "row", alignItems: "center", padding: 12, paddingTop: 50, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 8 },
   backBtn: { padding: 4 },
-  sessionId: { color: colors.foreground, fontSize: 16, fontWeight: "600", fontFamily: "Inter_600SemiBold", flex: 1 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
-  reconnectText: { color: colors.warning, fontSize: 12, fontFamily: "Inter_400Regular" },
+  sessionId: { color: colors.foreground, fontSize: 16, fontWeight: "600", fontFamily: "Inter_600SemiBold", flex: 1 },
+  fontBtn: { color: colors.primary, fontSize: 14, fontWeight: "700", fontFamily: "Inter_700Bold", paddingHorizontal: 8 },
+  reconnectBanner: { backgroundColor: "rgba(255,170,0,0.15)", padding: 8, alignItems: "center" },
+  reconnectText: { color: colors.warning, fontSize: 13, fontFamily: "Inter_500Medium" },
   outputContainer: { flex: 1, backgroundColor: colors.surface },
   outputContent: { padding: 12 },
   placeholder: { color: colors.mutedForeground, fontFamily: "Inter_400Regular" },

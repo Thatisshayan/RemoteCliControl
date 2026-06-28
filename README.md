@@ -2,7 +2,7 @@
 
 A full-stack mobile app that lets you control a Windows machine via SSH from your phone.
 
-> **Stack:** Express 5 + TypeScript + ssh2 + ws (backend) · Expo SDK 54 + React Native (mobile) · pnpm workspaces monorepo
+> **Stack:** Express 5 + TypeScript + ssh2 + ws (backend) · Expo SDK 52 + React Native (mobile) · pnpm workspaces monorepo
 
 ---
 
@@ -12,12 +12,9 @@ A full-stack mobile app that lets you control a Windows machine via SSH from you
 
 1. **OpenSSH Server** must be installed and running:
    ```powershell
-   # Install (Settings → Apps → Optional Features → OpenSSH Server, or via PowerShell):
    Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
    Start-Service sshd
    Set-Service -Name sshd -StartupType Automatic
-   # Verify:
-   Get-Service sshd
    ```
 
 2. **Node.js** v20+ — https://nodejs.org
@@ -29,8 +26,8 @@ A full-stack mobile app that lets you control a Windows machine via SSH from you
 
 ### On your phone
 
-- **iOS**: App Store → **Expo Go**
-- **Android**: Play Store → **Expo Go**
+- **iOS**: iPhone with iOS 16+ (TestFlight or App Store)
+- **Android**: Android 12+ (Play Store)
 
 ---
 
@@ -105,6 +102,10 @@ pnpm typecheck         # tsc --noEmit across all packages
 
 ## Features
 
+### Onboarding
+- 3-step setup wizard: Welcome → Backend URL → API Token
+- Persisted to AsyncStorage, skips on subsequent launches
+
 ### Terminal
 - Full interactive SSH shell (xterm-256color)
 - **ANSI color rendering** — git, npm, PowerShell colors display correctly
@@ -143,6 +144,21 @@ pnpm typecheck         # tsc --noEmit across all packages
 - **Copy to clipboard** or **Send directly to a terminal session**
 - If multiple sessions are open, a picker lets you choose which one
 
+### Push Notifications
+- **Session disconnect alerts** — notified when an SSH session closes unexpectedly
+- **Server health alerts** — notified when the server starts or goes offline
+- **Per-device registration** — each phone registers its Expo push token
+- **Notification preferences** — toggle each notification type on/off in Settings
+
+### Settings
+- **Connection** — backend URL + API token management
+- **Remote Access** — Cloudflare tunnel status
+- **Security** — Biometric lock (Face ID / Touch ID)
+- **Push Notifications** — per-type toggles
+- **Terminal** — font size adjustment
+- **Server Status** — uptime, active sessions
+- **About** — version, clear local data
+
 ### Security
 - **Bearer token auth** on all `/api/*` routes (when `API_TOKEN` is set)
 - **Rate limiting**: 100 req / 15 min general; 10 req / 15 min for `/connection/test`
@@ -156,6 +172,14 @@ pnpm typecheck         # tsc --noEmit across all packages
 - Global Express error handler — all errors return `{ error, code }` JSON
 - `/health` endpoint: `{ status, activeSessions, connectionConfigured, uptimeSeconds }`
 - Mobile `ErrorBoundary` with retry button per tab
+- **Slack notifications** — CI/CD status updates to #obsidian-media
+
+### CI/CD
+- **GitHub Actions** — Node 18/20/22 matrix for lint + test + build
+- **Mobile type checking** — `tsc --noEmit` on every push/PR
+- **EAS Build** — automated iOS builds on `v*` tags
+- **EAS Submit** — automatic TestFlight submission after build
+- **Slack notifications** — per-job status in compact summary format
 
 ---
 
@@ -167,39 +191,67 @@ pnpm typecheck         # tsc --noEmit across all packages
 │   ├── api-server/          ← Express 5 backend
 │   │   ├── src/
 │   │   │   ├── index.ts         ← Entry point (PORT required, WS setup)
+│   │   │   ├── tray.ts          ← System tray entry point (systray2)
 │   │   │   ├── app.ts           ← Express: cors, json, pino-http, rate limit, auth, routes
 │   │   │   ├── lib/
 │   │   │   │   ├── sshManager.ts  ← SSH sessions + utility connection pool
 │   │   │   │   ├── wsHandler.ts   ← WebSocket relay (input → SSH, output → client)
-│   │   │   │   ├── store.ts       ← JSON file-backed store (connections, commands)
+│   │   │   │   ├── store.ts       ← JSON file-backed store (connections, commands, push devices)
 │   │   │   │   ├── auth.ts        ← Bearer token middleware
-│   │   │   │   └── logger.ts      ← Pino with redact
+│   │   │   │   ├── tunnel.ts      ← Cloudflare Tunnel lifecycle manager
+│   │   │   │   ├── config.ts      ← data/config.json schema (tunnel, tray)
+│   │   │   │   ├── logger.ts      ← Pino with redact
+│   │   │   │   └── pushNotifications.ts ← Expo push notification utility
 │   │   │   └── routes/
 │   │   │       ├── health.ts      ← GET /health
-│   │   │       ├── connection.ts  ← Legacy single-profile + multi-profile endpoints
+│   │   │       ├── connection.ts  ← Single-profile + multi-profile endpoints
 │   │   │       ├── sessions.ts    ← SSH session CRUD + PATCH rename
 │   │   │       ├── files.ts       ← SFTP browse/read/upload/download/mkdir/delete/rename
 │   │   │       ├── processes.ts   ← PowerShell Get-Process + Stop-Process
-│   │   │       └── commands.ts    ← Saved command library CRUD
+│   │   │       ├── commands.ts    ← Saved command library CRUD
+│   │   │       └── push.ts        ← Push token registration + preferences
+│   │   ├── installer/             ← Windows Service install/uninstall scripts
+│   │   ├── data/                  ← Persistent storage (store.json, config.json)
 │   │   ├── Dockerfile
-│   │   └── build.mjs            ← esbuild (ESM, ssh2/ws externalized)
-│   └── mobile/                ← Expo SDK 54 React Native app
+│   │   └── build.mjs            ← esbuild (builds index.mjs + tray.mjs)
+│   └── mobile/                ← Expo SDK 52 React Native app
 │       ├── app/
-│       │   ├── _layout.tsx        ← QueryClient, ErrorBoundary, auth headers
+│       │   ├── _layout.tsx        ← QueryClient, ErrorBoundary, push notifications
 │       │   ├── connection.tsx     ← SSH profile manager
 │       │   ├── session/[sessionId].tsx  ← Full-screen terminal
+│       │   ├── onboarding/        ← 3-step setup wizard
+│       │   │   ├── index.tsx      ← Welcome
+│       │   │   ├── step2.tsx      ← Backend URL
+│       │   │   └── step3.tsx      ← API Token
 │       │   └── (tabs)/
+│       │       ├── _layout.tsx    ← 5-tab bar (Terminal, Files, Processes, Commands, Settings)
 │       │       ├── terminal.tsx   ← Session list (auto-refresh 5s)
 │       │       ├── files.tsx      ← File browser
 │       │       ├── processes.tsx  ← Process manager + search
-│       │       └── commands.tsx   ← Saved commands + send-to-session
-│       └── components/
-│           └── ErrorBoundary.tsx
+│       │       ├── commands.tsx   ← Saved commands + send-to-session
+│       │       └── settings.tsx   ← Connection, security, push, terminal, server status
+│       ├── components/ui/         ← Shared component library
+│       │   ├── Card.tsx
+│       │   ├── Badge.tsx
+│       │   ├── ActionSheet.tsx
+│       │   ├── SearchBar.tsx
+│       │   ├── EmptyState.tsx
+│       │   └── LoadingState.tsx
+│       ├── lib/
+│       │   └── notifications.ts   ← Push token registration + notification handler
+│       └── scripts/
+│           └── generate-icons.mjs ← Icon generation from SVG
+├── app-store/
+│   ├── metadata.json           ← App Store listing content
+│   └── README.md               ← Submission guide
+├── docs/
+│   ├── privacy-policy.html     ← Privacy policy page
+│   └── support.html            ← Support page
 ├── lib/
-│   ├── api-spec/openapi.yaml    ← Source of truth (18 paths)
+│   ├── api-spec/openapi.yaml    ← Source of truth (21 paths)
 │   ├── api-zod/                 ← Generated Zod schemas + TS types
 │   └── api-client-react/        ← Generated React Query hooks (orval)
-├── .github/workflows/ci.yml    ← CI: lint → test → build
+├── .github/workflows/ci.yml    ← CI: matrix + EAS + Slack
 ├── docker-compose.yml
 └── docker-compose.dev.yml
 ```
@@ -245,6 +297,11 @@ Connection URL: `ws[s]://<host>/api/ws/terminal/<sessionId>?token=<API_TOKEN>`
 | GET | `/api/commands` | List saved commands |
 | POST | `/api/commands` | Create saved command |
 | DELETE | `/api/commands/:id` | Delete saved command |
+| POST | `/api/push/register` | Register push token `{ pushToken, platform, deviceName? }` |
+| GET | `/api/push/devices` | List registered push devices |
+| DELETE | `/api/push/device/:id` | Unregister push device |
+| GET | `/api/push/preferences` | Get notification preferences |
+| PUT | `/api/push/preferences` | Update notification preferences `{ sessionDisconnected?, serverHealthChange? }` |
 
 ---
 

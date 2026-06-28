@@ -6,3 +6,4 @@ data/
 .env
 package-lock.json
 artifacts/mobile/.expo/
+.superpowers/

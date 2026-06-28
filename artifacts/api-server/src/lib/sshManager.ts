@@ -3,6 +3,7 @@ const require = createRequire(import.meta.url);
 const { Client } = require("ssh2") as typeof import("ssh2");
 
 import { getActiveConnection } from "./store.js";
+import { notifySessionDisconnected } from "./pushNotifications.js";
 import logger from "./logger.js";
 
 export interface ActiveSession {
@@ -20,6 +21,11 @@ let utilityClient: any = null;
 let utilityBusy = false;
 const utilityQueue: Array<{ resolve: (v: any) => void; reject: (e: any) => void }> = [];
 let sessionCounter = 0;
+const userInitiatedCloses = new Set<string>();
+
+export function markUserInitiatedClose(id: string): void {
+  userInitiatedCloses.add(id);
+}
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
@@ -152,6 +158,10 @@ export function createSession(): Promise<{ id: string; title: string; status: st
           session.status = "disconnected";
           sessions.delete(id);
           client.end();
+          if (!userInitiatedCloses.has(id)) {
+            notifySessionDisconnected(title, id).catch(() => {});
+          }
+          userInitiatedCloses.delete(id);
         });
 
         resolve({
@@ -167,6 +177,10 @@ export function createSession(): Promise<{ id: string; title: string; status: st
       logger.error({ id, err }, "SSH connection error");
       session.status = "error";
       sessions.delete(id);
+      if (!userInitiatedCloses.has(id)) {
+        notifySessionDisconnected(title, id).catch(() => {});
+      }
+      userInitiatedCloses.delete(id);
       reject(err);
     });
 
@@ -190,6 +204,7 @@ export function createSession(): Promise<{ id: string; title: string; status: st
 export function closeSession(id: string): boolean {
   const session = sessions.get(id);
   if (!session) return false;
+  userInitiatedCloses.add(id);
   if (session.shell) session.shell.end();
   session.client.end();
   sessions.delete(id);

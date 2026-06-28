@@ -1,4 +1,4 @@
-export { setBaseUrl, getBaseUrl, api } from "./client.js";
+export { setBaseUrl, getBaseUrl, setApiToken, api } from "./client.js";
 export * from "./hooks.js";
 export type {
   ConnectionConfig,

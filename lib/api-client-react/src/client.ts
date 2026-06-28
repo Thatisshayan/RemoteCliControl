@@ -27,7 +27,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const token = (globalThis as any).EXPO_PUBLIC_API_TOKEN;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...fetchOptions.headers,
+    ...(fetchOptions.headers as Record<string, string> | undefined),
   };
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;

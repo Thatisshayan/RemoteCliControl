@@ -1,0 +1,35 @@
+{
+  "cli": {
+    "version": ">= 14.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      },
+      "env": {
+        "EXPO_PUBLIC_DOMAIN": "http://localhost:3000"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": false
+      },
+      "env": {
+        "EXPO_PUBLIC_DOMAIN": "https://register-undergraduate-requirement-matter.trycloudflare.com"
+      }
+    },
+    "production": {
+      "distribution": "store",
+      "env": {
+        "EXPO_PUBLIC_DOMAIN": "https://register-undergraduate-requirement-matter.trycloudflare.com"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
