@@ -57,16 +57,17 @@
 ## PHASE EXECUTION ORDER
 
 ```
-Phase 1  →  Remote Access (Cloudflare Tunnel — built-in, automatic)
-Phase 2  →  UI/UX Design + Figma (GATE: Orchestrator must approve before Phase 3)
-Phase 3  →  Mobile UI Rebuild (implement approved Figma designs)
-Phase 4  →  iOS App Compilation (EAS Build → TestFlight)
-Phase 5  →  Security Hardening II (HTTPS, biometric, brute-force protection)
-Phase 6  →  Reliability II (session persistence, retry queue, push notifications)
-Phase 7  →  Performance (pagination, lazy loading, file list caching)
-Phase 8  →  E2E Testing (Maestro test suite)
-Phase 9  →  Production Monitoring (health alerts, uptime, error tracking)
-Phase 10 →  Final QA + App Store Prep
+Phase 1   →  Remote Access (Cloudflare Tunnel — built-in, automatic)
+Phase 1.5 →  Windows Installer (system tray + auto-start service + .exe)
+Phase 2   →  UI/UX Design + Figma (GATE: Orchestrator must approve before Phase 3)
+Phase 3   →  Mobile UI Rebuild (implement approved Figma designs)
+Phase 4   →  iOS App Compilation (EAS Build → TestFlight)
+Phase 5   →  Security Hardening II (HTTPS, biometric, brute-force protection)
+Phase 6   →  Reliability II (session persistence, retry queue, push notifications)
+Phase 7   →  Performance (pagination, lazy loading, file list caching)
+Phase 8   →  E2E Testing (Maestro test suite)
+Phase 9   →  Production Monitoring (health alerts, uptime, error tracking)
+Phase 10  →  Final QA + App Store Prep
 ```
 
 ---
@@ -120,6 +121,146 @@ Ensure `data/tunnel-url.txt` is gitignored (add it if not already covered by `da
 Add a "Remote Access" section explaining the Cloudflare Tunnel integration architecture: how the process is spawned, how the URL is captured, how it is surfaced to the mobile app.
 
 **Phase 1 complete when:** Server starts with `CLOUDFLARE_TUNNEL=true`, tunnel URL is logged and written to file, `GET /tunnel-url` returns the URL, TypeScript compiles clean.
+
+---
+
+## PHASE 1.5 — Windows Installer (System Tray + Auto-Start + .exe)
+**Branch:** `lastsprintphase1-5branch`
+**Goal:** The user double-clicks `RemoteCTRL-Setup.exe`, the server installs as a Windows Service that auto-starts on boot, a system tray icon appears, and the Cloudflare Tunnel starts automatically. No terminal window ever needs to be open.
+
+### Why This Matters
+Right now the user must: open PowerShell → type a command → keep the window open. If they close the terminal, the server dies. This is the single biggest friction point for non-technical users — and for the orchestrator running this on their own machine daily.
+
+The goal: **click once, it just runs. Always.** Even after a reboot.
+
+### Architecture Decision
+Use **three separate tools** — no single package does all of this well on Windows:
+- `pkg` — bundles the Node.js backend + all JS into a single standalone `.exe` (no Node.js install required on the host)
+- `node-windows` — installs the bundled `.exe` as a proper Windows Service (survives reboot, runs without login, visible in `services.msc`)
+- `systray` (npm package `systray2`) — adds a system tray icon with a right-click menu
+
+The Electron alternative (a full desktop app framework) is overkill here — it would add 150 MB to the download. `pkg` + `node-windows` + `systray2` keeps the installer under 50 MB.
+
+### Tasks
+
+#### T-W01 — System tray process (`artifacts/api-server/src/tray.ts`)
+Create a separate entry point `src/tray.ts` that:
+1. Spawns the main server (`dist/index.mjs`) as a child process
+2. Spawns `cloudflared.exe` (if `CLOUDFLARE_TUNNEL=true`)
+3. Creates a system tray icon using `systray2` with these menu items:
+   - **RemoteCTRL** (title, not clickable)
+   - **Status: Running** (or "Status: Stopped" — updates every 10s by polling `/health`)
+   - **Tunnel URL: https://xxxx.trycloudflare.com** (clickable — copies to clipboard)
+   - Separator
+   - **Open Server Logs** — opens `data/server.log` in Notepad
+   - **Restart Server** — kills and respawns the server child process
+   - **Stop Server** — kills server and tunnel, exits tray
+   - **Quit** — same as Stop
+
+The tray process reads its config from `data/config.json` (PORT, API_TOKEN, CLOUDFLARE_TUNNEL). If `data/config.json` does not exist, it shows a first-run setup wizard (see T-W03).
+
+#### T-W02 — `data/config.json` schema
+On first run (no `data/config.json`), the tray writes a default config:
+```json
+{
+  "PORT": 3000,
+  "API_TOKEN": "",
+  "CLOUDFLARE_TUNNEL": true
+}
+```
+The setup wizard (T-W03) lets the user fill in `API_TOKEN`. `PORT` defaults to 3000 but is user-configurable. `data/config.json` is gitignored (it is already covered by `data/`).
+
+#### T-W03 — First-run setup wizard
+When `data/config.json` does not exist, before starting the server, show a Windows native dialog using `node-dialog` or a small Electron-free HTML window (use `open` npm package to open a local HTML file in the default browser). The wizard collects:
+1. **Port** (default 3000)
+2. **API Token** (user picks or auto-generates a random 32-char token)
+3. **Enable Cloudflare Tunnel** (checkbox, default on)
+
+On "Finish", writes `data/config.json` and starts the server. The Cloudflare Tunnel URL (once active) is shown in a dialog: "Your tunnel URL is: https://xxxx.trycloudflare.com — copy this into your phone app."
+
+#### T-W04 — pkg bundle configuration
+Add `pkg` as a dev dependency in `artifacts/api-server/package.json`. Add a `"pkg"` config section:
+```json
+"pkg": {
+  "scripts": "dist/index.mjs",
+  "assets": ["data/**", "node_modules/ssh2/**", "node_modules/ws/**"],
+  "targets": ["node20-win-x64"],
+  "outputPath": "release/"
+}
+```
+Add a `"bundle:exe"` script: `"pkg . --out-path release/"`.
+
+`ssh2` and `ws` are native modules — they cannot be bundled inside the `.exe`. They must be placed alongside the `.exe` in the release folder. Document this clearly.
+
+#### T-W05 — Windows Service installer script (`installer/install-service.js`)
+Create `artifacts/api-server/installer/install-service.js` using `node-windows`:
+```
+When run as Administrator:
+  1. Installs RemoteCTRL.exe as a Windows Service named "RemoteCTRL"
+  2. Sets StartType: Automatic (starts on boot)
+  3. Sets the working directory to the installation folder
+  4. Starts the service immediately
+```
+Create a paired `installer/uninstall-service.js` that stops and removes the service.
+
+#### T-W06 — Release folder structure
+The final release folder structure (what gets zipped and distributed):
+```
+RemoteCTRL-Windows/
+├── RemoteCTRL.exe          ← pkg bundle (server + tray)
+├── cloudflared.exe         ← downloaded separately (see README)
+├── node_modules/
+│   ├── ssh2/               ← native module (cannot be bundled)
+│   └── ws/                 ← native module (cannot be bundled)
+├── installer/
+│   ├── install-service.js  ← run as Admin to install Windows Service
+│   └── uninstall-service.js
+├── data/                   ← created on first run
+└── README-WINDOWS.txt      ← plain text quickstart (3 steps)
+```
+
+#### T-W07 — `README-WINDOWS.txt` (plain text, no markdown)
+Three steps, no technical jargon:
+```
+REMOTECTRL — WINDOWS QUICKSTART
+
+Step 1: Double-click RemoteCTRL.exe
+        → First time: answer 3 quick questions (port, token, tunnel)
+        → A green icon appears in your system tray (bottom-right corner)
+
+Step 2: Copy the tunnel URL shown on screen
+        → Paste it into the RemoteCTRL iOS app when prompted
+
+Step 3: Done. The server runs in the background.
+        Right-click the tray icon to restart, stop, or see the URL again.
+
+OPTIONAL — Auto-start on Windows boot (even without logging in):
+  Right-click installer/install-service.js → Run as Administrator
+  RemoteCTRL will now start automatically when Windows starts.
+
+UNINSTALL:
+  Right-click installer/uninstall-service.js → Run as Administrator
+  Then delete this folder.
+```
+
+#### T-W08 — GitHub Actions release job
+Add a `release` job to `.github/workflows/ci.yml` that triggers on `git tag v*`:
+1. Runs `pnpm build:server`
+2. Runs `npm run bundle:exe`
+3. Zips the release folder into `RemoteCTRL-Windows-v<version>.zip`
+4. Creates a GitHub Release and uploads the zip as a release asset
+
+#### T-W09 — Update `README.md`
+Add a "Windows Desktop App" section at the top of the README (above the developer quickstart):
+```
+## Download (Recommended for most users)
+→ Download RemoteCTRL-Windows-vX.X.X.zip from the Releases page
+→ Extract and run RemoteCTRL.exe
+→ No Node.js or pnpm required
+```
+Keep the existing developer quickstart below this, labelled "Developer / Advanced Setup".
+
+**Phase 1.5 complete when:** `RemoteCTRL.exe` double-clicked → tray icon appears → server starts → tunnel URL shown → app accessible from phone on 4G. Windows Service installs cleanly via `install-service.js`. GitHub release zip produced by CI on tag push.
 
 ---
 
@@ -589,7 +730,8 @@ Update every doc file to reflect the final shipped state:
 | Phase | Tasks | Focus |
 |---|---|---|
 | Phase 1 | T-R01 – T-R06 | Cloudflare Tunnel auto-start, tunnel URL API |
-| Phase 2 | Design only | Figma: 8 screens × all states (GATE) |
+| Phase 1.5 | T-W01 – T-W09 | Windows tray app, .exe bundle, Windows Service installer, GitHub release |
+| Phase 2 | Design only | Figma: 8 screens × all states (GATE — Orchestrator must approve) |
 | Phase 3 | T-U01 – T-U06 | Mobile UI rebuild, onboarding, settings, component library |
 | Phase 4 | T-I01 – T-I07 | EAS Build → TestFlight → real iPhone install |
 | Phase 5 | T-S01 – T-S06 | Brute-force lockout, biometric, helmet, input limits |
@@ -610,6 +752,9 @@ This sprint reaches DONE STATE when:
 - [ ] Biometric lock protects the app
 - [ ] Push notifications fire on command completion
 - [ ] Maestro E2E tests pass in CI
+- [ ] `RemoteCTRL.exe` double-click → tray icon → server running (no terminal needed)
+- [ ] Windows Service auto-starts on boot via `install-service.js`
+- [ ] GitHub release zip produced automatically on `git tag v*`
 - [ ] Score reaches 9.5 / 10 or higher
 
 ---
