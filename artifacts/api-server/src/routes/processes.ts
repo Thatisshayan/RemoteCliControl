@@ -2,7 +2,7 @@ import { Router } from "express";
 import { execCommand } from "../lib/sshManager.js";
 const router = Router();
 
-router.get("/processes", async (_req, res) => {
+router.get("/processes", async (_req, res, next) => {
   try {
     const cmd = 'powershell.exe -NoProfile -Command "Get-Process | Select-Object -Property Name,Id,CPU,WorkingSet,Responding | ConvertTo-Csv -NoTypeInformation"';
     const output = await execCommand(cmd);
@@ -24,18 +24,21 @@ router.get("/processes", async (_req, res) => {
       };
     });
     res.json(processes);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+  } catch (e: any) {
+    next(e);
   }
 });
 
-router.delete("/processes/:pid", async (req, res) => {
+router.delete("/processes/:pid", async (req, res, next) => {
   try {
+    if (!/^\d+$/.test(req.params.pid)) {
+      return res.status(400).json({ error: "Invalid PID" });
+    }
     const pid = req.params.pid;
     await execCommand(`powershell.exe -NoProfile -Command "Stop-Process -Id ${pid} -Force"`);
     res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+  } catch (e: any) {
+    next(e);
   }
 });
 

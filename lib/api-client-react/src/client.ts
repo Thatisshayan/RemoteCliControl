@@ -1,4 +1,5 @@
 let baseUrl = "http://localhost:3000";
+const API_TOKEN = typeof globalThis !== "undefined" ? (globalThis as any).EXPO_PUBLIC_API_TOKEN : undefined;
 
 export function setBaseUrl(url: string) {
   baseUrl = url.replace(/\/$/, "");
@@ -6,6 +7,10 @@ export function setBaseUrl(url: string) {
 
 export function getBaseUrl() {
   return baseUrl;
+}
+
+export function setApiToken(token?: string) {
+  (globalThis as any).EXPO_PUBLIC_API_TOKEN = token;
 }
 
 interface RequestOptions extends RequestInit {
@@ -19,12 +24,17 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     const qs = new URLSearchParams(params).toString();
     url += `?${qs}`;
   }
+  const token = (globalThis as any).EXPO_PUBLIC_API_TOKEN;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...fetchOptions.headers,
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
   const res = await fetch(url, {
     ...fetchOptions,
-    headers: {
-      "Content-Type": "application/json",
-      ...fetchOptions.headers,
-    },
+    headers,
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));

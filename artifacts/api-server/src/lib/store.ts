@@ -59,6 +59,18 @@ export function getActiveConnection(): ConnectionProfile | null {
   return state.connections.find((c) => c.id === state.activeConnectionId) || null;
 }
 
+export function getActiveConnectionSafe(): any {
+  const conn = getActiveConnection();
+  if (!conn) return null;
+  const { password, privateKey, passphrase, ...rest } = conn as any;
+  return {
+    ...(rest as any),
+    password: "***",
+    privateKey: privateKey ? "***" : undefined,
+    passphrase: passphrase ? "***" : undefined,
+  };
+}
+
 export function setActiveConnection(id: string): void {
   state.activeConnectionId = id;
   persist();
@@ -67,6 +79,18 @@ export function setActiveConnection(id: string): void {
 // Multi-profile helpers
 export function getConnections(): ConnectionProfile[] {
   return state.connections;
+}
+
+export function getConnectionsSafe(): Array<Omit<ConnectionProfile, "password" | "privateKey" | "passphrase"> & { password?: string; privateKey?: string; passphrase?: string }> {
+  return state.connections.map((c) => {
+    const { password, privateKey, passphrase, ...rest } = c;
+    return {
+      ...rest,
+      password: "***",
+      privateKey: privateKey ? "***" : undefined,
+      passphrase: passphrase ? "***" : undefined,
+    };
+  });
 }
 
 export function getConnectionById(id: string): ConnectionProfile | undefined {

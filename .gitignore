@@ -1,7 +1,8 @@
 node_modules/
 dist/
-.expo/
-*.tsbuildinfo
-.env
-.env.local
 data/
+*.log
+*.exe
+.env
+package-lock.json
+artifacts/mobile/.expo/

@@ -2,21 +2,36 @@ import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Alert } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
 import * as SplashScreen from "expo-splash-screen";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import ErrorBoundary from "../components/ErrorBoundary";
-import { setBaseUrl } from "@remotectrl/api-client-react";
+import { setBaseUrl, setApiToken } from "@remotectrl/api-client-react";
 import { colors } from "../constants/colors";
 
 const domain = process.env.EXPO_PUBLIC_DOMAIN || "http://localhost:3000";
 const baseUrl = domain.startsWith("http") ? domain : `http://${domain}`;
 setBaseUrl(baseUrl);
+setApiToken(process.env.EXPO_PUBLIC_API_TOKEN);
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      onError: (e: any) => {
+        Alert.alert("Request failed", e?.message ?? "Unexpected error");
+      },
+    },
+    mutations: {
+      onError: (e: any) => {
+        Alert.alert("Action failed", e?.message ?? "Unexpected error");
+      },
+    },
+  },
 });
 
 SplashScreen.preventAutoHideAsync();

@@ -16,13 +16,84 @@ export interface ActiveSession {
 }
 
 const sessions = new Map<string, ActiveSession>();
+let utilityClient: any = null;
+let utilityBusy = false;
+const utilityQueue: Array<{ resolve: (v: any) => void; reject: (e: any) => void }> = [];
+let sessionCounter = 0;
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
 
 function generateTitle(): string {
-  return `Session ${sessions.size + 1}`;
+  sessionCounter += 1;
+  return `Session ${sessionCounter}`;
+}
+
+function drainUtilityQueue(error?: any) {
+  const next = utilityQueue.shift();
+  if (!next) return;
+  if (error) next.reject(error);
+  else acquireUtilityClient().then(next.resolve, next.reject);
+}
+
+async function acquireUtilityClient(): Promise<any> {
+  if (utilityClient && !utilityBusy) return utilityClient;
+  if (utilityBusy) {
+    return new Promise<any>((resolve, reject) => utilityQueue.push({ resolve, reject }));
+  }
+  const cfg = getActiveConnection();
+  if (!cfg) throw new Error("No connection configured");
+  utilityBusy = true;
+  const client = new Client();
+  utilityClient = client;
+  await new Promise<void>((resolve, reject) => {
+    client.once("ready", () => {
+      client.once("error", () => {
+        utilityClient = null;
+        utilityBusy = false;
+        drainUtilityQueue(new Error("Utility SSH disconnected"));
+      });
+      client.once("end", () => {
+        utilityClient = null;
+        utilityBusy = false;
+        drainUtilityQueue(new Error("Utility SSH ended"));
+      });
+      resolve();
+    });
+    client.once("error", reject);
+    client.connect(buildConnectOpts(cfg));
+  });
+  utilityBusy = false;
+  drainUtilityQueue();
+  return client;
+}
+
+export function resetUtilityClient() {
+  if (utilityClient) {
+    try { utilityClient.end(); } catch {}
+  }
+  utilityClient = null;
+  utilityBusy = false;
+  while (utilityQueue.length) utilityQueue.pop()?.reject(new Error("Utility client reset"));
+}
+
+const READY_TIMEOUT = 15000;
+
+function buildConnectOpts(cfg: any) {
+  const opts: any = {
+    host: cfg.host,
+    port: cfg.port,
+    username: cfg.username,
+    readyTimeout: READY_TIMEOUT,
+  };
+  if (cfg.privateKey) {
+    opts.privateKey = cfg.privateKey;
+    if (cfg.passphrase) opts.passphrase = cfg.passphrase;
+  } else {
+    opts.password = cfg.password;
+  }
+  return opts;
 }
 
 export function listSessions() {
@@ -119,7 +190,7 @@ export function createSession(): Promise<{ id: string; title: string; status: st
 export function closeSession(id: string): boolean {
   const session = sessions.get(id);
   if (!session) return false;
-  if (session.shell) session.shell.destroy();
+  if (session.shell) session.shell.end();
   session.client.end();
   sessions.delete(id);
   return true;
@@ -129,6 +200,13 @@ export function sendToSession(id: string, data: string): boolean {
   const session = sessions.get(id);
   if (!session || !session.shell) return false;
   session.shell.write(data);
+  return true;
+}
+
+export function resizeSession(id: string, rows: number, cols: number): boolean {
+  const session = sessions.get(id);
+  if (!session || !session.shell) return false;
+  (session.shell as any).setWindow(rows, cols, 0, 0);
   return true;
 }
 
@@ -143,69 +221,25 @@ export async function execCommand(command: string): Promise<string> {
   const cfg = getActiveConnection();
   if (!cfg) throw new Error("No connection configured");
 
-  return new Promise((resolve, reject) => {
-    const client = new Client();
+  const client = await acquireUtilityClient();
+  return new Promise<string>((resolve, reject) => {
     const chunks: Buffer[] = [];
-
-    client.on("ready", () => {
-      client.exec(command, (err: any, stream: any) => {
-        if (err) { client.end(); reject(err); return; }
-        stream.on("data", (data: Buffer) => chunks.push(data));
-        stream.stderr.on("data", (data: Buffer) => chunks.push(data));
-        stream.on("close", () => {
-          client.end();
-          resolve(Buffer.concat(chunks).toString("utf8"));
-        });
-      });
+    client.exec(command, (err: any, stream: any) => {
+      if (err) { reject(err); return; }
+      stream.on("data", (data: Buffer) => chunks.push(data));
+      stream.stderr.on("data", (data: Buffer) => chunks.push(data));
+      stream.on("close", () => resolve(Buffer.concat(chunks).toString("utf8")));
     });
-
-    client.on("error", reject);
-
-    const connectOpts: any = {
-      host: cfg.host,
-      port: cfg.port,
-      username: cfg.username,
-      readyTimeout: 15000,
-    };
-    if (cfg.privateKey) {
-      connectOpts.privateKey = cfg.privateKey;
-      if (cfg.passphrase) connectOpts.passphrase = cfg.passphrase;
-    } else {
-      connectOpts.password = cfg.password;
-    }
-    client.connect(connectOpts);
   });
 }
 
-export function getSftp(): Promise<{ sftp: any; client: any }> {
-  const cfg = getActiveConnection();
-  if (!cfg) return Promise.reject(new Error("No connection configured"));
-
-  return new Promise((resolve, reject) => {
-    const client = new Client();
-
-    client.on("ready", () => {
-      client.sftp((err: any, sftp: any) => {
-        if (err) { client.end(); reject(err); return; }
-        resolve({ sftp, client });
-      });
+export async function getSftp(): Promise<any> {
+  const client = await acquireUtilityClient();
+  return new Promise<any>((resolve, reject) => {
+    client.sftp((err: any, sftp: any) => {
+      if (err) { reject(err); return; }
+      resolve(sftp);
     });
-
-    client.on("error", reject);
-
-    const connectOpts: any = {
-      host: cfg.host,
-      port: cfg.port,
-      username: cfg.username,
-      readyTimeout: 15000,
-    };
-    if (cfg.privateKey) {
-      connectOpts.privateKey = cfg.privateKey;
-      if (cfg.passphrase) connectOpts.passphrase = cfg.passphrase;
-    } else {
-      connectOpts.password = cfg.password;
-    }
-    client.connect(connectOpts);
   });
 }
 

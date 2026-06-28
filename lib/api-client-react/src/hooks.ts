@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { UseQueryOptions, UseMutationOptions } from "@tanstack/react-query";
 import { api, getBaseUrl } from "./client.js";
 import type {
   ConnectionConfig,
@@ -74,8 +75,8 @@ export const useActivateConnection = () => {
 };
 
 // Session hooks
-export const useGetSessions = () =>
-  useQuery({ queryKey: keys.sessions, queryFn: () => api.get<Session[]>("/sessions") });
+export const useGetSessions = (options?: UseQueryOptions<Session[]>) =>
+  useQuery({ queryKey: keys.sessions, queryFn: () => api.get<Session[]>("/sessions"), ...options });
 
 export const useCreateSession = () => {
   const qc = useQueryClient();
@@ -107,6 +108,7 @@ export const useListFiles = (path: string) =>
   useQuery({
     queryKey: keys.files(path),
     queryFn: () => api.get<{ path: string; items: FileItem[] }>("/files", { path }),
+    staleTime: 10_000,
   });
 
 export const useDeleteFile = () => {
