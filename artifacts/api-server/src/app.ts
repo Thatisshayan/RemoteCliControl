@@ -18,9 +18,9 @@ app.use("/health", healthRoutes);
 const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
 const connectionLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
 
-app.use("/api", generalLimiter, authMiddleware, routes);
-
 app.use("/api/connection/test", connectionLimiter);
+
+app.use("/api", generalLimiter, authMiddleware, routes);
 
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   logger.error({ err, url: req.url, method: req.method }, "Unhandled request error");

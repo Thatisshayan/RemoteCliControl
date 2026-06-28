@@ -4,4 +4,5 @@ data/
 *.log
 *.exe
 .env
-package-lock.jsonartifacts/mobile/.expo/
+package-lock.json
+artifacts/mobile/.expo/

@@ -3,7 +3,7 @@ const require = createRequire(import.meta.url);
 const { WebSocketServer } = require("ws") as typeof import("ws");
 
 import type { Server } from "http";
-import { addOutputListener, getSession } from "./sshManager.js";
+import { addOutputListener, getSession, sendToSession, resizeSession } from "./sshManager.js";
 import logger from "./logger.js";
 
 const MAX_BUFFER = 64 * 1024;
@@ -59,9 +59,21 @@ export function setupWebSocket(server: Server) {
       }
     });
 
-    ws.on("message", () => {
+    ws.on("pong", () => {
       const entry = connections.get(ws);
       if (entry) entry.alive = true;
+    });
+
+    ws.on("message", (data: any) => {
+      const text = data.toString();
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed.type === "resize" && typeof parsed.rows === "number" && typeof parsed.cols === "number") {
+          resizeSession(sessionId, parsed.rows, parsed.cols);
+          return;
+        }
+      } catch {}
+      sendToSession(sessionId, text);
     });
 
     ws.on("close", () => {

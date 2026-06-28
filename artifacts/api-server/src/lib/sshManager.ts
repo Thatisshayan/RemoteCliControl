@@ -203,6 +203,13 @@ export function sendToSession(id: string, data: string): boolean {
   return true;
 }
 
+export function resizeSession(id: string, rows: number, cols: number): boolean {
+  const session = sessions.get(id);
+  if (!session || !session.shell) return false;
+  (session.shell as any).setWindow(rows, cols, 0, 0);
+  return true;
+}
+
 export function addOutputListener(id: string, fn: (data: string) => void): () => void {
   const session = sessions.get(id);
   if (!session) return () => {};
