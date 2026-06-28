@@ -14,7 +14,7 @@
       "backgroundColor": "#0d0d0d"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.remotectrl.app",
       "infoPlist": {
         "NSFaceIDUsageDescription": "RemoteCTRL uses Face ID to lock the app and protect your server credentials."

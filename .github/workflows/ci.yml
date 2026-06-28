@@ -4,11 +4,15 @@ on:
   push:
     branches: ["**"]
   pull_request:
-    branches: ["main", "phase1branch", "phase2branch", "phase3branch", "phase4branch", "phase5branch", "phase6branch", "phase7branch", "phase8branch", "phase9branch", "phase10branch"]
+    branches: ["main"]
 
 jobs:
   lint:
+    name: Lint (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -16,14 +20,18 @@ jobs:
           version: 9
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter api-server tsc --noEmit
       - run: pnpm --filter api-server build
 
   test:
+    name: Test (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -31,12 +39,32 @@ jobs:
           version: 9
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter api-server test
 
   build-server:
+    name: Build Server (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:server
+      - run: test -f artifacts/api-server/dist/index.mjs
+
+  typecheck-mobile:
+    name: TypeCheck Mobile
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,5 +76,111 @@ jobs:
           node-version: 20
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build:server
-      - run: test -f artifacts/api-server/dist/index.mjs
+      - run: pnpm --filter @remotectrl/mobile tsc --noEmit
+
+  eas-build:
+    name: EAS Build (iOS)
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [lint, test, build-server, typecheck-mobile]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - name: EAS Build
+        run: npx eas build --platform ios --profile preview --non-interactive
+        working-directory: artifacts/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+  eas-submit:
+    name: EAS Submit (TestFlight)
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [eas-build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - name: EAS Submit
+        run: npx eas submit --platform ios --profile preview --non-interactive
+        working-directory: artifacts/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+  slack-notify:
+    name: Slack Notification
+    if: always()
+    needs: [lint, test, build-server, typecheck-mobile]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "channel": "#obsidian-media",
+              "username": "RemoteCTRL CI",
+              "icon_emoji": ":rocket:",
+              "attachments": [
+                {
+                  "color": "${{ contains(needs.*.result, 'failure') && '#ff0000' || '#36a64f' }}",
+                  "blocks": [
+                    {
+                      "type": "header",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "${{ contains(needs.*.result, 'failure') && ':x: RemoteCTRL CI — Failed' || ':white_check_mark: RemoteCTRL CI — Passed' }}"
+                      }
+                    },
+                    {
+                      "type": "section",
+                      "fields": [
+                        { "type": "mrkdwn", "text": "*Branch:*\n${{ github.ref_name }}" },
+                        { "type": "mrkdwn", "text": "*Commit:*\n<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>" },
+                        { "type": "mrkdwn", "text": "*Author:*\n${{ github.actor }}" },
+                        { "type": "mrkdwn", "text": "*Run:*\n<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|#${{ github.run_id }}>" }
+                      ]
+                    },
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "${{ github.event.head_commit && github.event.head_commit.message || 'Manual trigger / PR event' }}"
+                      }
+                    },
+                    {
+                      "type": "divider"
+                    },
+                    {
+                      "type": "section",
+                      "fields": [
+                        { "type": "mrkdwn", "text": "*lint (18):* ${{ needs.lint.result == 'success' && ':white_check_mark:' || ':x:' }}" },
+                        { "type": "mrkdwn", "text": "*lint (20):* ${{ needs.lint.result == 'success' && ':white_check_mark:' || ':x:' }}" },
+                        { "type": "mrkdwn", "text": "*lint (22):* ${{ needs.lint.result == 'success' && ':white_check_mark:' || ':x:' }}" },
+                        { "type": "mrkdwn", "text": "*test (18):* ${{ needs.test.result == 'success' && ':white_check_mark:' || ':x:' }}" },
+                        { "type": "mrkdwn", "text": "*test (20):* ${{ needs.test.result == 'success' && ':white_check_mark:' || ':x:' }}" },
+                        { "type": "mrkdwn", "text": "*test (22):* ${{ needs.test.result == 'success' && ':white_check_mark:' || ':x:' }}" },
+                        { "type": "mrkdwn", "text": "*build-server (18):* ${{ needs.build-server.result == 'success' && ':white_check_mark:' || ':x:' }}" },
+                        { "type": "mrkdwn", "text": "*build-server (20):* ${{ needs.build-server.result == 'success' && ':white_check_mark:' || ':x:' }}" },
+                        { "type": "mrkdwn", "text": "*build-server (22):* ${{ needs.build-server.result == 'success' && ':white_check_mark:' || ':x:' }}" },
+                        { "type": "mrkdwn", "text": "*typecheck-mobile:* ${{ needs.typecheck-mobile.result == 'success' && ':white_check_mark:' || ':x:' }}" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
