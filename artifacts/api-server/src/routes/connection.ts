@@ -45,7 +45,7 @@ router.post("/connection", (req, res) => {
   res.json(profile);
 });
 
-router.post("/connection/test", async (req, res) => {
+router.post("/connection/test", async (req, res, next) => {
   try {
     const validation = validateConnectionInput(req.body);
     if (!validation.ok) return res.status(400).json({ error: validation.errors });
@@ -53,7 +53,7 @@ router.post("/connection/test", async (req, res) => {
     const result = await testConnection({ host, port: Number(port), username, password, privateKey, passphrase });
     res.json(result);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
