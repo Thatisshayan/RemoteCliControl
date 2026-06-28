@@ -2,182 +2,160 @@
 
 A full-stack mobile app that lets you control a Windows machine via SSH from your phone.
 
+> **Stack:** Express 5 + TypeScript + ssh2 + ws (backend) · Expo SDK 54 + React Native (mobile) · pnpm workspaces monorepo
+
+---
+
 ## Prerequisites
 
-### On your Windows PC (the machine you want to control):
-1. **OpenSSH Server** must be installed and running
-   - Go to Settings → Apps → Optional Features → Add a feature → OpenSSH Server → Install
-   - Open PowerShell as Administrator and run:
-     ```powershell
-     Start-Service sshd
-     Set-Service -Name sshd -StartupType Automatic
-     ```
-   - Verify it's running: `Get-Service sshd`
+### On your Windows PC (the machine you want to control)
 
-2. **Node.js** v18+ must be installed — https://nodejs.org
+1. **OpenSSH Server** must be installed and running:
+   ```powershell
+   # Install (Settings → Apps → Optional Features → OpenSSH Server, or via PowerShell):
+   Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+   Start-Service sshd
+   Set-Service -Name sshd -StartupType Automatic
+   # Verify:
+   Get-Service sshd
+   ```
 
-3. **pnpm** must be installed:
+2. **Node.js** v20+ — https://nodejs.org
+
+3. **pnpm** v9+:
    ```bash
    npm install -g pnpm
    ```
 
-### On your phone:
-- **iOS**: App Store → Expo Go
-- **Android**: Play Store → Expo Go
+### On your phone
+
+- **iOS**: App Store → **Expo Go**
+- **Android**: Play Store → **Expo Go**
 
 ---
 
-## Setup
+## Quickstart
 
-### 1. Clone the repo on your PC:
 ```bash
+# 1. Clone
 git clone https://github.com/Thatisshayan/RemoteCliControl.git
 cd RemoteCliControl
-```
 
-### 2. Install dependencies:
-```bash
+# 2. Install all dependencies
 pnpm install
-```
 
-### 3. Build the backend:
-```bash
-cd artifacts/api-server
-node build.mjs
-```
+# 3. Configure environment
+cp .env.example .env
+# Edit .env: set PORT and optionally API_TOKEN
 
-### 4. Start the backend server:
+# 4. Build & start backend
+pnpm build:server
+PORT=3000 node artifacts/api-server/dist/index.mjs
 
-**PowerShell:**
-```powershell
-$env:PORT="3000"; node dist/index.mjs
+# 5. Start mobile (in a second terminal)
+pnpm dev:mobile
+# Scan the QR code with Expo Go on your phone
 ```
-
-**Bash / Git Bash:**
-```bash
-PORT=3000 node dist/index.mjs
-```
-You should see:
-```
-{"level":30,"msg":"Server running on port 3000"}
-{"level":30,"msg":"WebSocket server mounted at /api/ws/terminal"}
-```
-
-### 5. Find your PC's local IP address:
-```bash
-ipconfig
-```
-Look for "IPv4 Address" under your active adapter (e.g., `192.168.1.50`).
-
-### 6. On your phone, open Expo Go and scan the QR code:
-```bash
-cd artifacts/mobile
-npx expo start
-```
-Scan the QR code displayed in the terminal with your phone's camera (iOS) or Expo Go scanner (Android).
 
 ---
 
-## Usage
+## Docker
 
-### Setting Up SSH Connection
+```bash
+# Production
+docker compose up
 
-1. Open the app → tap the **gear icon** (top-right) on the Terminal tab
-2. Fill in the form:
-   - **Name**: A label (e.g., "Home PC")
-   - **Host**: Your PC's local IP (e.g., `192.168.1.50`)
-   - **Port**: `22` (default)
-   - **Username**: Your Windows username
-   - **Password**: Your Windows password
-3. Tap **Test Connection** to verify it works (you'll see latency on success)
-4. Tap **Save & Connect**
+# Development (hot reload)
+docker compose -f docker-compose.dev.yml up
+```
 
-> **SSH Key Auth**: Toggle to "SSH Key" mode and paste your PEM private key instead of using a password.
-
-> **Multiple Profiles**: You can save multiple SSH targets (e.g., home PC, work server). Tap a profile to activate it. Long-press to delete.
-
-### Creating a Terminal Session
-
-1. Go to the **Terminal** tab
-2. Tap the **green +** button (bottom-right)
-3. You'll be taken to a full-screen terminal connected to your PC
-
-### Using the Terminal
-
-- **Type commands** in the input bar at the bottom and tap Send (or press Enter)
-- **Quick keys**: Tab, Ctrl+C, Ctrl+D are available as buttons above the input
-- **Command history**: Use ▲ / ▼ arrows to cycle through previously sent commands
-- **Font size**: Use A- / A+ buttons to make text smaller or larger
-- **Colors**: ANSI colors (git, npm, ls --color) render with actual colors
-- **Auto-reconnect**: If the connection drops, it automatically reconnects (up to 10 attempts with exponential backoff)
-
-### Managing Sessions
-
-- **Terminal tab** lists all active sessions with colored status dots:
-  - 🟢 Green = connected
-  - 🟡 Amber = connecting
-  - 🔴 Red = error
-  - ⚪ Grey = disconnected
-- **Tap a session** to open it
-- **Long-press** a session to rename it
-- **X button** on a session card to close it
-
-### File Browser (Files Tab)
-
-1. Navigate directories by tapping folders
-2. Use **breadcrumbs** at the top to jump back to any parent directory
-3. **New folder**: Tap the folder+ icon in the header
-4. **Long-press** any item for actions:
-   - **Directories**: Delete
-   - **Files**: Preview, Download, or Delete
-5. **Upload**: Tap the upload icon in the header → pick a file from your phone
-6. **Download**: Long-press a file → Download → share it via AirDrop, Files, etc.
-7. **Text Preview**: Tap any file to view its contents in a modal (files up to 100KB)
-
-### Process Manager (Processes Tab)
-
-- Shows all running Windows processes with:
-  - **CPU usage** bar (green < 50%, amber 50-80%, red > 80%)
-  - **Memory** in MB
-  - **Status** badge (running / not responding)
-- **Search**: Type in the search bar to filter processes by name
-- **Kill a process**: Tap the X button, or long-press → confirm
-- **Refresh**: Tap the refresh icon or pull down
-
-### Saved Commands (Commands Tab)
-
-1. Tap the **green +** to add a new command:
-   - **Label**: Name for the command (e.g., "Restart IIS")
-   - **Command**: The actual command (e.g., `iisreset`)
-   - **Description**: Optional note
-2. **Tap a command** to see options:
-   - **Copy**: Copies to your phone's clipboard
-   - **Send to Session**: Fires the command directly into an active terminal session
-3. **Long-press** or tap the trash icon to delete
-
----
-
-## Network Requirements
-
-Your phone and PC must be on the **same local network** (same Wi-Fi).
-
-If you're outside your home network, you can:
-- Use a VPN to connect back to your home network
-- Set up port forwarding on your router (port 22 for SSH, port 3000 for the API)
+The server reads `PORT` and `API_TOKEN` from environment. Mount `./data` for persistent storage.
 
 ---
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | (required) | Backend server port (e.g., `3000`) |
-| `EXPO_PUBLIC_DOMAIN` | `localhost:3000` | Backend URL the mobile app connects to |
+### Backend (`.env` in repo root or `artifacts/api-server/`)
 
-To connect to a remote server, set `EXPO_PUBLIC_DOMAIN` in `artifacts/mobile/.env`:
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PORT` | ✅ | — | Port to listen on (e.g. `3000`) |
+| `API_TOKEN` | — | unset | Bearer token for API auth. When unset, auth is bypassed (local dev). |
+
+### Mobile (`artifacts/mobile/.env`)
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `EXPO_PUBLIC_DOMAIN` | ✅ | `http://localhost:3000` | Full URL of the backend (including `http://` or `https://`) |
+| `EXPO_PUBLIC_API_TOKEN` | — | unset | Must match the server's `API_TOKEN` when auth is enabled |
+
+---
+
+## Development Scripts
+
+```bash
+pnpm dev:server        # Backend with hot reload (tsx watch)
+pnpm build:server      # Build backend → artifacts/api-server/dist/index.mjs
+pnpm dev:mobile        # Start Expo dev server
+pnpm test              # Run backend vitest suite
+pnpm typecheck         # tsc --noEmit across all packages
 ```
-EXPO_PUBLIC_DOMAIN=192.168.1.50:3000
-```
+
+---
+
+## Features
+
+### Terminal
+- Full interactive SSH shell (xterm-256color)
+- **ANSI color rendering** — git, npm, PowerShell colors display correctly
+- **Command history** — ▲/▼ buttons cycle through the last 100 commands
+- **Font size** — A− / A+ buttons, persisted to AsyncStorage, clamped 8–20px
+- **Auto-reconnect** — exponential backoff, up to 10 attempts, status shown in header
+- **Terminal resize** — sends `{ type:"resize", rows, cols }` to backend on layout change
+- **Keep awake** — screen does not dim during active sessions
+- **Output ring buffer** — last 5,000 lines kept; older output dropped to prevent memory pressure
+- Quick keys: Tab · Ctrl+C · Ctrl+D
+
+### SSH Connection Profiles
+- **Multiple profiles** — save as many SSH targets as you like (home PC, work server, etc.)
+- **Password or SSH key auth** — paste a PEM private key; optional passphrase support
+- **Connection test** — verifies credentials and shows round-trip latency (ms)
+- **Active profile** — tap any saved profile to make it the active connection
+- **Persistent** — all profiles survive server restarts (`data/store.json`)
+
+### File Browser
+- Navigate directories; breadcrumb bar for quick jump to parent
+- **Upload** from phone (up to 100 MB)
+- **Download** to phone (via native share sheet)
+- **Preview** text files in-app (up to 100 KB)
+- **Create folder** · **Delete** · **Rename** (SFTP rename)
+- Directories listed first, then files — both alphabetically
+- File sizes shown in human-readable form (KB / MB / GB)
+
+### Process Manager
+- Lists all running Windows processes with CPU %, memory (MB), and status
+- **Search / filter** by process name (live, client-side)
+- Kill any process (with confirmation)
+- CPU bar color: green < 50 % · amber 50–80 % · red > 80 %
+
+### Saved Commands
+- Library of frequently-used commands (label + command + description)
+- **Copy to clipboard** or **Send directly to a terminal session**
+- If multiple sessions are open, a picker lets you choose which one
+
+### Security
+- **Bearer token auth** on all `/api/*` routes (when `API_TOKEN` is set)
+- **Rate limiting**: 100 req / 15 min general; 10 req / 15 min for `/connection/test`
+- **Path sanitization**: `..` traversal blocked on all SFTP operations
+- **PID validation**: regex `/^\d+$/` before any PowerShell `Stop-Process` call
+- **Credential masking**: passwords/keys are never returned in API responses or logs
+- **pino redact**: `password`, `privateKey`, `passphrase` stripped from all log output
+
+### Observability
+- `pino-http` structured HTTP request logging on every request
+- Global Express error handler — all errors return `{ error, code }` JSON
+- `/health` endpoint: `{ status, activeSessions, connectionConfigured, uptimeSeconds }`
+- Mobile `ErrorBoundary` with retry button per tab
 
 ---
 
@@ -186,45 +164,97 @@ EXPO_PUBLIC_DOMAIN=192.168.1.50:3000
 ```
 /
 ├── artifacts/
-│   ├── api-server/          ← Express backend (SSH relay)
+│   ├── api-server/          ← Express 5 backend
 │   │   ├── src/
-│   │   │   ├── index.ts     ← Entry point
-│   │   │   ├── app.ts       ← Express setup
+│   │   │   ├── index.ts         ← Entry point (PORT required, WS setup)
+│   │   │   ├── app.ts           ← Express: cors, json, pino-http, rate limit, auth, routes
 │   │   │   ├── lib/
-│   │   │   │   ├── sshManager.ts   ← SSH session management
-│   │   │   │   ├── wsHandler.ts    ← WebSocket relay
-│   │   │   │   ├── store.ts        ← JSON file-backed store
-│   │   │   │   └── logger.ts       ← Pino logger
-│   │   │   └── routes/      ← REST endpoints
-│   │   └── build.mjs        ← esbuild config
-│   └── mobile/              ← Expo React Native app
+│   │   │   │   ├── sshManager.ts  ← SSH sessions + utility connection pool
+│   │   │   │   ├── wsHandler.ts   ← WebSocket relay (input → SSH, output → client)
+│   │   │   │   ├── store.ts       ← JSON file-backed store (connections, commands)
+│   │   │   │   ├── auth.ts        ← Bearer token middleware
+│   │   │   │   └── logger.ts      ← Pino with redact
+│   │   │   └── routes/
+│   │   │       ├── health.ts      ← GET /health
+│   │   │       ├── connection.ts  ← Legacy single-profile + multi-profile endpoints
+│   │   │       ├── sessions.ts    ← SSH session CRUD + PATCH rename
+│   │   │       ├── files.ts       ← SFTP browse/read/upload/download/mkdir/delete/rename
+│   │   │       ├── processes.ts   ← PowerShell Get-Process + Stop-Process
+│   │   │       └── commands.ts    ← Saved command library CRUD
+│   │   ├── Dockerfile
+│   │   └── build.mjs            ← esbuild (ESM, ssh2/ws externalized)
+│   └── mobile/                ← Expo SDK 54 React Native app
 │       ├── app/
-│       │   ├── (tabs)/      ← Tab screens
-│       │   ├── session/     ← Terminal screen
-│       │   └── connection.tsx
+│       │   ├── _layout.tsx        ← QueryClient, ErrorBoundary, auth headers
+│       │   ├── connection.tsx     ← SSH profile manager
+│       │   ├── session/[sessionId].tsx  ← Full-screen terminal
+│       │   └── (tabs)/
+│       │       ├── terminal.tsx   ← Session list (auto-refresh 5s)
+│       │       ├── files.tsx      ← File browser
+│       │       ├── processes.tsx  ← Process manager + search
+│       │       └── commands.tsx   ← Saved commands + send-to-session
 │       └── components/
-└── lib/
-    ├── api-spec/            ← OpenAPI spec
-    ├── api-zod/             ← Zod schemas + TS types
-    └── api-client-react/    ← React Query hooks
+│           └── ErrorBoundary.tsx
+├── lib/
+│   ├── api-spec/openapi.yaml    ← Source of truth (18 paths)
+│   ├── api-zod/                 ← Generated Zod schemas + TS types
+│   └── api-client-react/        ← Generated React Query hooks (orval)
+├── .github/workflows/ci.yml    ← CI: lint → test → build
+├── docker-compose.yml
+└── docker-compose.dev.yml
 ```
+
+### WebSocket Protocol
+
+```
+Client → Server:  { "type": "resize", "rows": 30, "cols": 120 }   ← terminal resize
+Client → Server:  "raw shell input string\n"                        ← keystrokes
+Server → Client:  "shell output data stream"                        ← SSH output
+```
+
+Connection URL: `ws[s]://<host>/api/ws/terminal/<sessionId>?token=<API_TOKEN>`
+
+---
+
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Health check (no auth required) |
+| GET | `/api/connection` | Active connection (safe — password masked) |
+| POST | `/api/connection` | Save / update active connection |
+| POST | `/api/connection/test` | Test SSH credentials (rate-limited: 10/15min) |
+| GET | `/api/connections` | All saved profiles (passwords masked) |
+| POST | `/api/connections` | Create a new profile |
+| DELETE | `/api/connections/:id` | Delete a profile |
+| POST | `/api/connections/:id/activate` | Set active profile |
+| GET | `/api/connections/active` | Get active profile |
+| GET | `/api/sessions` | List SSH sessions |
+| POST | `/api/sessions` | Create SSH session |
+| DELETE | `/api/sessions/:id` | Close SSH session |
+| PATCH | `/api/sessions/:id` | Rename session `{ title }` |
+| GET | `/api/files?path=` | List directory |
+| GET | `/api/files/read?path=` | Preview file (≤ 100 KB) |
+| GET | `/api/files/download?path=` | Stream file download |
+| POST | `/api/files/upload?path=` | Upload file (≤ 100 MB) |
+| POST | `/api/files/mkdir` | Create directory |
+| DELETE | `/api/files?path=` | Delete file or directory |
+| PATCH | `/api/files/rename` | Rename `{ from, to }` |
+| GET | `/api/processes` | List Windows processes |
+| DELETE | `/api/processes/:pid` | Kill process |
+| GET | `/api/commands` | List saved commands |
+| POST | `/api/commands` | Create saved command |
+| DELETE | `/api/commands/:id` | Delete saved command |
+
+---
 
 ## Troubleshooting
 
-**"No connection configured"**
-- Go to the Connection screen (gear icon) and set up your SSH credentials
-
-**Connection test fails**
-- Verify OpenSSH Server is running on your PC
-- Check your firewall isn't blocking port 22
-- Make sure your phone and PC are on the same network
-
-**Terminal shows "Waiting for output..."**
-- The WebSocket might not have connected yet. Try going back and reopening the session
-
-**File browser shows "Empty directory"**
-- You might not have permission to read that directory. Try navigating to a different path.
-
-**App crashes on startup**
-- Make sure `pnpm install` completed successfully
-- Try deleting `node_modules` and running `pnpm install` again
+| Symptom | Fix |
+|---------|-----|
+| "No connection configured" | Open Connection screen (gear icon), save SSH credentials |
+| Connection test fails | Check OpenSSH is running on Windows, firewall allows port 22, phone and PC on same network |
+| Terminal shows no output | WebSocket may not have connected — go back and reopen the session |
+| 401 Unauthorized | Set `EXPO_PUBLIC_API_TOKEN` in `artifacts/mobile/.env` to match server's `API_TOKEN` |
+| File browser empty | Navigate to a directory you have read permission for |
+| App crashes on startup | Run `pnpm install` again; check Node.js ≥ 20 |

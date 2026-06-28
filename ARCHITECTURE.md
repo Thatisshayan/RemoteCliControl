@@ -1,80 +1,229 @@
-# Architecture
+# RemoteCTRL — Architecture
 
-RemoteCliControl is a full-stack mobile application for SSH control with a monorepo structure.
+## System Overview
+
+RemoteCTRL is a full-stack mobile SSH control application. A Node.js backend runs on the Windows machine being controlled; a React Native mobile app connects to it over HTTP/WebSocket. The backend relays commands to the Windows machine via SSH (localhost or loopback).
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  Phone (Expo Go / compiled APK)                                  │
+│                                                                  │
+│  ┌─────────┐  ┌─────────┐  ┌───────────┐  ┌──────────────────┐ │
+│  │Terminal │  │  Files  │  │ Processes │  │    Commands      │ │
+│  │  tab    │  │   tab   │  │    tab    │  │      tab         │ │
+│  └────┬────┘  └────┬────┘  └─────┬─────┘  └────────┬─────────┘ │
+│       │            │             │                  │           │
+│  ┌────▼────────────▼─────────────▼──────────────────▼─────────┐ │
+│  │         React Query hooks  (@remotectrl/api-client-react)   │ │
+│  └────────────────────────────┬────────────────────────────────┘ │
+└───────────────────────────────│────────────────────────────────┘
+                                │ HTTP/REST + WebSocket
+                                │ (EXPO_PUBLIC_DOMAIN)
+┌───────────────────────────────▼────────────────────────────────┐
+│  Windows PC — api-server (Node.js 20, Express 5)               │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  app.ts — middleware stack                               │   │
+│  │  cors → json(1mb) → pino-http → connectionLimiter →     │   │
+│  │  generalLimiter → authMiddleware → routes                │   │
+│  └──────────────────────┬───────────────────────────────────┘   │
+│                         │                                        │
+│  ┌──────────┐  ┌────────▼──────┐  ┌─────────────────────────┐  │
+│  │ /health  │  │  REST routes  │  │  WebSocket (ws)         │  │
+│  │ (no auth)│  │  /api/*       │  │  /api/ws/terminal/:id   │  │
+│  └──────────┘  └───────┬───────┘  └──────────┬──────────────┘  │
+│                         │                     │                  │
+│  ┌──────────────────────▼─────────────────────▼──────────────┐  │
+│  │                   sshManager.ts                           │  │
+│  │  • ActiveSession map (shell streams)                      │  │
+│  │  • utilityClient (pooled exec/SFTP connection)            │  │
+│  │  • createSession / closeSession / sendToSession           │  │
+│  │  • resizeSession (shell.setWindow)                        │  │
+│  │  • execCommand / getSftp / testConnection                 │  │
+│  └──────────────────────────┬──────────────────────────────┘   │
+│                              │ ssh2                              │
+│  ┌───────────────────────────▼──────────────────────────────┐   │
+│  │  Windows OpenSSH Server (localhost:22)                   │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│  ┌─────────────────┐  ┌─────────────────────────────────────┐   │
+│  │   store.ts      │  │   logger.ts                         │   │
+│  │   data/store.json│  │   pino + pino-http                 │   │
+│  │   connections[] │  │   redact: password/privateKey       │   │
+│  │   commands[]    │  └─────────────────────────────────────┘   │
+│  └─────────────────┘                                            │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+---
 
 ## Monorepo Layout
 
 ```
 /
 ├── artifacts/
-│   ├── api-server/         ← Express 5 backend (SSH relay)
+│   ├── api-server/               ← Express 5 backend
 │   │   ├── src/
-│   │   │   ├── index.ts      ← Entry point (requires PORT env)
-│   │   │   ├── app.ts        ← Express setup with middleware
+│   │   │   ├── index.ts          ← Entry: requires PORT, starts HTTP + WS
+│   │   │   ├── app.ts            ← Express app factory
 │   │   │   ├── lib/
-│   │   │   │   ├── sshManager.ts   ← SSH session management, exec, SFTP
-│   │   │   │   ├── wsHandler.ts    ← WebSocket terminal relay
-│   │   │   │   ├── store.ts        ← JSON file-backed persistence
-│   │   │   │   └── logger.ts       ← Pino structured logging
-│   │   │   └── routes/     ← REST endpoints
-│   │   │       ├── index.ts
-│   │   │       ├── health.ts
-│   │   │       ├── connection.ts
-│   │   │       ├── connections.ts
-│   │   │       ├── sessions.ts
-│   │   │       ├── files.ts
-│   │   │       ├── processes.ts
-│   │   │       └── commands.ts
-│   │   └── build.mjs        ← esbuild configuration
-│   └── mobile/              ← Expo React Native frontend
+│   │   │   │   ├── sshManager.ts ← SSH lifecycle + connection pool
+│   │   │   │   ├── wsHandler.ts  ← WebSocket relay + heartbeat
+│   │   │   │   ├── store.ts      ← JSON file persistence
+│   │   │   │   ├── auth.ts       ← Bearer token middleware
+│   │   │   │   └── logger.ts     ← Pino with credential redaction
+│   │   │   └── routes/
+│   │   │       ├── health.ts     ← GET /health (auth-exempt)
+│   │   │       ├── connection.ts ← Single-profile + multi-profile endpoints
+│   │   │       ├── sessions.ts   ← SSH session CRUD + rename
+│   │   │       ├── files.ts      ← SFTP operations (18 ops)
+│   │   │       ├── processes.ts  ← PowerShell process manager
+│   │   │       └── commands.ts   ← Saved command library
+│   │   ├── src/__tests__/        ← Integration tests
+│   │   ├── src/lib/__tests__/    ← Unit tests (store, auth)
+│   │   ├── src/routes/__tests__/ ← Route validation tests
+│   │   ├── Dockerfile            ← Multi-stage build
+│   │   ├── build.mjs             ← esbuild config
+│   │   └── vitest.config.ts
+│   └── mobile/                   ← Expo SDK 54 React Native
 │       ├── app/
-│       │   ├── (tabs)/      ← Tab navigation screens
-│       │   ├── session/     ← Terminal screen
-│       │   └── connection.tsx
-│       └── components/      ← Shared UI components
+│       │   ├── _layout.tsx       ← Root: QueryClient, ErrorBoundary, auth headers
+│       │   ├── connection.tsx    ← SSH profile manager (list + form)
+│       │   ├── session/
+│       │   │   └── [sessionId].tsx ← Full-screen terminal
+│       │   └── (tabs)/
+│       │       ├── _layout.tsx   ← Tab bar
+│       │       ├── terminal.tsx  ← Session list (5s auto-refresh)
+│       │       ├── files.tsx     ← SFTP file browser
+│       │       ├── processes.tsx ← Process manager + search
+│       │       └── commands.tsx  ← Saved commands + send-to-session
+│       └── components/
+│           └── ErrorBoundary.tsx ← Per-tab crash recovery
 ├── lib/
-│   ├── api-spec/            ← OpenAPI specification
-│   ├── api-zod/             ← Generated Zod schemas
-│   └── api-client-react/    ← React Query hooks
-├── .github/workflows/       ← GitHub Actions CI
-├── docs/                    ← Documentation
-└── docker-compose.yml       ← Container orchestration
+│   ├── api-spec/openapi.yaml     ← Source of truth (18 REST paths)
+│   ├── api-zod/                  ← Zod schemas + TypeScript types (generated)
+│   └── api-client-react/         ← React Query hooks (orval-generated)
+├── .github/workflows/ci.yml      ← CI: lint → test → build
+├── docker-compose.yml            ← Production
+├── docker-compose.dev.yml        ← Development (volume mounts)
+├── .env.example                  ← Backend env template
+└── artifacts/mobile/.env.example ← Mobile env template
 ```
 
-## Key Modules
+---
 
-### Backend (`artifacts/api-server`)
+## Key Module Responsibilities
 
-| Module | Purpose |
+### `sshManager.ts`
+
+Central hub for all SSH activity.
+
+| Export | Purpose |
 |--------|---------|
-| `sshManager.ts` | SSH session lifecycle, persistent connection pooling for exec/SFTP |
-| `wsHandler.ts` | WebSocket upgrade handler, output buffering, ping/pong |
-| `store.ts` | JSON file-backed CRUD for connections and commands |
-| `auth.ts` | Bearer token validation middleware |
-| `logger.ts` | Pino logger with HTTP request logging |
+| `createSession()` | Connects SSH, opens xterm-256color shell, adds to session map |
+| `closeSession(id)` | Calls `client.end()`, removes from map |
+| `sendToSession(id, data)` | Writes raw string to shell stream |
+| `resizeSession(id, rows, cols)` | Calls `shell.setWindow(rows, cols, 0, 0)` |
+| `addOutputListener(id, fn)` | Subscribes to shell output; returns cleanup fn |
+| `getUtilityClient()` | Returns/creates pooled SSH client for exec/SFTP (avoids a new handshake per call) |
+| `execCommand(cmd)` | Runs one-shot exec via utility client |
+| `getSftp()` | Opens SFTP subsystem via utility client |
+| `testConnection(cfg)` | Connect + immediate disconnect, returns latency ms |
 
-### Mobile (`artifacts/mobile`)
+**Connection pooling:** `utilityClient` is a single persistent SSH connection reused across all `exec` and SFTP calls. On disconnect/error it sets itself to `null` and reconnects on next call. A `utilityQueue` holds pending callers during reconnection.
 
-| Screen | Purpose |
-|--------|---------|
-| Terminal | SSH terminal with ANSI rendering, resize, command history |
-| Files | Remote file browser with upload/download/mkdir/delete/rename |
-| Processes | Remote process list with kill functionality |
-| Commands | Saved command library with quick-send |
+### `wsHandler.ts`
+
+Bridges HTTP upgrade → WebSocket → SSH shell.
+
+**Heartbeat:** `setInterval` every 30 s sends `ws.ping()`. Connections that don't respond with a `pong` within one interval are terminated. Alive flag is set on `ws.on("pong")`.
+
+**Message dispatch:**
+```
+Client message received
+  → try JSON.parse
+      → { type: "resize", rows, cols } → resizeSession()
+  → else: raw string → sendToSession()
+```
+
+**Output buffering:** While the WebSocket is not `OPEN`, up to 64 KB of SSH output is buffered per connection and flushed on reconnect.
+
+### `store.ts`
+
+File-backed persistence. State is loaded from `data/store.json` on startup. Every mutation calls `persist()` which does a synchronous `writeFileSync`. Structure:
+
+```json
+{
+  "connections": [{ "id", "name", "host", "port", "username", "password", "privateKey?", "passphrase?" }],
+  "activeConnectionId": "string | null",
+  "commands": [{ "id", "label", "command", "description" }]
+}
+```
+
+Safe exports (`getActiveConnectionSafe`, `getConnectionsSafe`) return `password: "***"` for API responses. Full credentials are only accessed internally by `sshManager.ts`.
+
+### `auth.ts`
+
+```
+API_TOKEN unset  → next()          (open dev mode)
+API_TOKEN set    → require "Authorization: Bearer <token>" → 401 on mismatch
+```
+
+WebSocket auth: token checked from `?token=` query parameter on the upgrade request.
+
+`/health` is mounted outside the `/api` router and is always unauthenticated (Docker health checks).
+
+---
 
 ## Security Model
 
-- API_TOKEN optional auth: When set, all `/api/*` routes require `Authorization: Bearer <token>`
-- Rate limiting: General (100/15min), Connection test (10/15min)
-- Path sanitization: `..` traversal blocked in all file operations
-- PID validation: Regex `/^\d+$/` enforced on `/processes/:pid`
+| Layer | Mechanism |
+|-------|-----------|
+| API auth | Bearer token middleware on all `/api/*` routes |
+| WS auth | `?token=` query param validated on HTTP upgrade |
+| Rate limiting | 100 req/15 min general; 10 req/15 min on `/connection/test` |
+| Path traversal | `sanitizePath()` rejects any path containing `..` |
+| PID injection | `/^\d+$/` regex enforced before `Stop-Process -Id <pid>` |
+| Credential leakage | `getActiveConnectionSafe()` masks password/key in all API responses |
+| Log redaction | `pino redact: ['password', 'privateKey', 'passphrase']` |
+| Body size | `express.json({ limit: '1mb' })` — upload route separately allows 100 MB multipart |
 
-## WebSocket Protocol
+---
+
+## API Contract
+
+Source of truth: `lib/api-spec/openapi.yaml` (18 paths).
+
+Codegen pipeline:
+```
+openapi.yaml
+  → pnpm --filter @remotectrl/api-zod generate     → lib/api-zod/src/schemas.ts
+  → pnpm --filter @remotectrl/api-client-react generate → lib/api-client-react/src/hooks.ts
+```
+
+Run both codegen commands after any change to `openapi.yaml`.
+
+---
+
+## CI Pipeline
+
+`.github/workflows/ci.yml` — triggers on every push to every branch:
 
 ```
-Client → Server: {type: "resize", rows: 30, cols: 120}
-Client → Server: "raw shell input string"
-Server → Client: "shell output data stream"
+lint job        → pnpm --filter api-server tsc --noEmit
+                → pnpm --filter api-server build
+test job        → pnpm --filter api-server test
+build-server    → pnpm build:server + verify dist/index.mjs exists
 ```
 
-Connection URL: `ws://<host>/api/ws/terminal/:sessionId?token=<API_TOKEN>`
+---
+
+## Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| ssh2/ws externalized from esbuild | Both use native modules incompatible with bundling; loaded via `createRequire(import.meta.url)` at runtime |
+| WebSocket shares HTTP server | Avoids a second port; WS upgrade is intercepted via `server.on('upgrade')` |
+| Synchronous `writeFileSync` for persistence | Store mutations are infrequent; async writes risk data loss on crash without a queue |
+| In-memory session map | SSH sessions are inherently stateful and tied to a process lifetime; no benefit in persisting them |
+| `utilityClient` pool for exec/SFTP | Eliminates one full SSH handshake per file or process operation |
