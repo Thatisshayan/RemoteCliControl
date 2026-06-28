@@ -6,8 +6,11 @@ import type { Server } from "http";
 import { addOutputListener, getSession } from "./sshManager.js";
 import logger from "./logger.js";
 
+const MAX_BUFFER = 64 * 1024;
+
 export function setupWebSocket(server: Server) {
   const wss = new WebSocketServer({ noServer: true });
+  const buffers = new Map<any, string>();
 
   server.on("upgrade", (request, socket, head) => {
     const url = new URL(request.url || "", "http://localhost");
@@ -46,6 +49,13 @@ export function setupWebSocket(server: Server) {
     const removeListener = addOutputListener(sessionId, (data: string) => {
       if (ws.readyState === 1) {
         ws.send(data);
+      } else {
+        const buf = (buffers.get(ws) || "") + data;
+        if (buf.length > MAX_BUFFER) {
+          buffers.set(ws, buf.slice(buf.length - MAX_BUFFER));
+        } else {
+          buffers.set(ws, buf);
+        }
       }
     });
 
@@ -57,11 +67,13 @@ export function setupWebSocket(server: Server) {
     ws.on("close", () => {
       logger.info({ sessionId }, "WebSocket closed");
       connections.delete(ws);
+      buffers.delete(ws);
       removeListener();
     });
 
     ws.on("error", () => {
       connections.delete(ws);
+      buffers.delete(ws);
       removeListener();
     });
   });
