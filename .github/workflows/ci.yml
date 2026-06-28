@@ -120,6 +120,54 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
+  windows-release:
+    name: Windows Release (.exe)
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [lint, test, build-server, typecheck-mobile]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - name: Build server
+        run: pnpm build:server
+      - name: Bundle .exe with pkg
+        run: pnpm --filter api-server bundle:exe
+      - name: Assemble release folder
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}"
+          $releaseDir = "RemoteCTRL-Windows-$version"
+          New-Item -ItemType Directory -Force $releaseDir
+          Copy-Item artifacts/api-server/release/RemoteCTRL.exe $releaseDir/ -ErrorAction SilentlyContinue
+          Copy-Item artifacts/api-server/installer $releaseDir/installer -Recurse
+          Copy-Item artifacts/api-server/README-WINDOWS.txt $releaseDir/
+          New-Item -ItemType Directory -Force $releaseDir/data
+          Compress-Archive -Path $releaseDir -DestinationPath "RemoteCTRL-Windows-$version.zip"
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: RemoteCTRL-Windows-${{ github.ref_name }}.zip
+          body: |
+            ## RemoteCTRL ${{ github.ref_name }}
+
+            ### Windows Desktop App
+            1. Download and extract `RemoteCTRL-Windows-${{ github.ref_name }}.zip`
+            2. Download `cloudflared.exe` from https://github.com/cloudflare/cloudflared/releases and place it in the extracted folder
+            3. Double-click `RemoteCTRL.exe` — follow the first-run wizard
+            4. Paste the tunnel URL into the iOS app
+
+            ### iOS
+            Available on TestFlight — see the EAS build job for the link.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   slack-notify:
     name: Slack Notification
     if: always()
