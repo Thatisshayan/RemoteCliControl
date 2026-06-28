@@ -9,7 +9,7 @@
     "start": "node dist/index.mjs",
     "start:3000": "node -e \"process.env.PORT=3000;import('./dist/index.mjs')\"",
     "start:tray": "tsx src/tray.ts",
-    "bundle:exe": "pkg dist/tray.mjs --out-path release/",
+    "bundle:exe": "yao-pkg dist/tray.mjs --targets node20-win-x64 --out-path release/",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
@@ -38,14 +38,14 @@
     "@types/ws": "^8.5.0",
     "@vitest/coverage-v8": "^4.1.9",
     "esbuild": "^0.24.0",
-    "pkg": "^5.8.1",
+    "@yao-pkg/pkg": "^5.12.0",
     "esbuild-plugin-pino": "^2.0.0",
     "supertest": "^7.2.2",
     "tsx": "^4.22.4",
     "typescript": "^5.6.0",
     "vitest": "^4.1.9"
   },
-  "pkg": {
+  "yao-pkg": {
     "scripts": "dist/tray.mjs",
     "assets": [
       "dist/index.mjs",

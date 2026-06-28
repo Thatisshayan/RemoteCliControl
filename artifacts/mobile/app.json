@@ -17,7 +17,8 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.remotectrl.app",
       "infoPlist": {
-        "NSFaceIDUsageDescription": "RemoteCTRL uses Face ID to lock the app and protect your server credentials."
+        "NSFaceIDUsageDescription": "RemoteCTRL uses Face ID to lock the app and protect your server credentials.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
