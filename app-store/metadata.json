@@ -1,0 +1,29 @@
+{
+  "app": {
+    "name": "RemoteCTRL",
+    "subtitle": "Remote SSH Terminal Manager",
+    "description": "RemoteCTRL is a powerful remote access tool that puts a full SSH terminal, file browser, and process manager in your pocket.\n\nConnect to any server via SSH and manage it from your iPhone or iPad — no VPN required.\n\nFeatures:\n• Unlimited SSH terminal sessions with full xterm-256color support\n• Real-time terminal output with smooth scrolling\n• File browser — upload, download, edit, and manage files via SFTP\n• Process manager — monitor CPU/memory usage and kill runaway processes\n• Command library — save and reuse your most-used commands\n• Multi-profile support — switch between servers instantly\n• Push notifications — get alerted on session disconnects and server health changes\n• Biometric lock — secure your app with Face ID or Touch ID\n• Dark mode — easy on the eyes during late-night maintenance\n\nHow it works:\n1. Install the RemoteCTRL server on your machine (Windows, macOS, or Linux)\n2. The server creates a secure Cloudflare tunnel — no port forwarding needed\n3. Point your phone at the tunnel URL and connect\n4. Manage your server from anywhere in the world\n\nRemoteCTRL is open source and self-hosted. Your data never touches third-party servers.",
+  "keywords": "ssh,remote,terminal,server,admin,management,sftp,shell,console,command",
+  "categories": {
+    "primary": "Developer Tools",
+    "secondary": "Utilities"
+  },
+  "contentRating": "4+",
+  "copyright": "© 2026 RemoteCTRL",
+  "urls": {
+    "privacyPolicy": "https://github.com/Thatisshayan/RemoteCliControl/blob/main/docs/privacy-policy.html",
+    "support": "https://github.com/Thatisshayan/RemoteCliControl/blob/main/docs/support.html",
+    "marketing": "https://github.com/Thatisshayan/RemoteCliControl"
+  },
+  "screenshots": {
+    "note": "Take 6.7\" iPhone screenshots after building. Required sizes: 1290x2796 (6.7\"), 1242x2688 (6.5\"), 2048x2732 (12.9\" iPad)",
+    "suggested": [
+      "Connection Profiles screen with server list",
+      "Terminal session with active SSH connection",
+      "File Browser showing directory listing",
+      "Process Manager with CPU/memory stats",
+      "Settings screen with all options",
+      "Push notification on lock screen"
+    ]
+  }
+}
