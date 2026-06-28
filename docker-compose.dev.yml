@@ -1,0 +1,8 @@
+services:
+  api-server:
+    command: ["pnpm", "dev:server"]
+    volumes:
+      - ./artifacts/api-server/src:/app/src
+      - ./lib/api-spec:/app/lib/api-spec
+      - ./lib/api-zod/src:/app/lib/api-zod/src
+      - ./lib/api-client-react/src:/app/lib/api-client-react/src

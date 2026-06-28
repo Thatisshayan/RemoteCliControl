@@ -4,7 +4,10 @@
   "private": true,
   "scripts": {
     "dev:server": "cd artifacts/api-server && pnpm dev",
+    "build:server": "cd artifacts/api-server && pnpm build",
     "dev:mobile": "cd artifacts/mobile && pnpm start",
-    "build:server": "cd artifacts/api-server && pnpm build"
+    "typecheck": "pnpm -r tsc --noEmit",
+    "test": "pnpm --filter api-server test",
+    "lint": "pnpm --filter api-server eslint . || true"
   }
 }
