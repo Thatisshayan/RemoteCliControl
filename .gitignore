@@ -3,7 +3,12 @@ dist/
 data/
 *.log
 *.exe
+*.ipa
+*.dmg
+*.apk
 .env
 package-lock.json
 artifacts/mobile/.expo/
 .superpowers/
+.removeAllScreenshots/
+artifacts/api-server/release/

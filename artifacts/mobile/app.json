@@ -2,7 +2,7 @@
   "expo": {
     "name": "RemoteCTRL",
     "slug": "remotectrl",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "scheme": "remotectrl",
     "userInterfaceStyle": "dark",
@@ -36,7 +36,8 @@
       "expo-router",
       "expo-font",
       "expo-local-authentication",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-dev-client"
     ],
     "extra": {
       "eas": {
