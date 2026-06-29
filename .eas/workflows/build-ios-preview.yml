@@ -1,0 +1,24 @@
+name: Build iOS preview (manual)
+
+# Manual-trigger only. No `on.push:` here — every push will NOT queue a build.
+# Trigger this workflow when you need a TestFlight refresh.
+#
+# Trigger sources:
+#   1. GitHub Actions UI: Actions tab → "Build iOS preview" → Run workflow
+#   2. EAS dashboard: expo.dev/accounts/obsidianstudio/projects/remotectrl/builds → "Build from GitHub"
+#   3. PR label: `eas-build-ios:preview` (auto-default if just `eas-build-ios`)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [labeled]
+    # Only build when this label is applied. No commits-to-PR will trigger it.
+  # Keep build-trigger list SHORT and explicit to preserve monthly quota.
+
+jobs:
+  build_ios:
+    name: Build iOS for TestFlight (preview profile)
+    type: build
+    params:
+      platform: ios
+      profile: preview
