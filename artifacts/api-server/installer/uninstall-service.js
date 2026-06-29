@@ -1,9 +1,16 @@
 const { Service } = require("node-windows");
-const path = require("path");
 
-const svc = new Service({
-  name: "RemoteCTRL",
-  script: path.join(__dirname, "..", "dist", "index.mjs"),
+const svc = new Service({ name: "RemoteCTRL" });
+
+svc.on("alreadyuninstalled", () => {
+  console.log("RemoteCTRL was not installed.");
+  process.exit(0);
+});
+
+svc.on("stop", () => {
+  console.log("RemoteCTRL service stopped.");
+  console.log("Uninstalling service...");
+  svc.uninstall();
 });
 
 svc.on("uninstall", () => {
@@ -12,9 +19,9 @@ svc.on("uninstall", () => {
 });
 
 svc.on("error", (err) => {
-  console.error("Service error:", err.message);
+  console.error("Service error:", err && err.message ? err.message : err);
   process.exit(1);
 });
 
-console.log("Uninstalling RemoteCTRL service...");
-svc.uninstall();
+console.log("Stopping and uninstalling RemoteCTRL service...");
+svc.stop();
