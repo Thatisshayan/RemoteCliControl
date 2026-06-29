@@ -1,7 +1,21 @@
-// #region debug
+// #region debug — runtime log capture for TestFlight crash debugging
 const DEBUG_SESSION_ID = 'remotectrl-cold-start-crash-2b0a26';
-const DEBUG_LOG_URL = 'http://localhost:8787/log';
-// Match any dev machine IP your phone can reach. Best is the rig IP.
+
+// Rig IP - phone can't hit "localhost" because that means the phone itself.
+// The dev box IP is what the phone can reach. Override via env if needed.
+const RIG_HOST_CANDIDATES = [
+  '10.0.0.127',
+  '192.168.1.1',
+  '10.0.0.1',
+  'localhost',
+];
+const getDebugBaseUrl = () => {
+  const e = (typeof process !== 'undefined' && process?.env) || {};
+  const fromEnv = e.EXPO_DEV_LOG_HOST || e.RIG_IP;
+  if (fromEnv) return `http://${fromEnv}:8787/log`;
+  return `http://${RIG_HOST_CANDIDATES[0]}:8787/log`;
+};
+const DEBUG_LOG_URL = getDebugBaseUrl();
 
 function postLog(msg, data, hypothesisId, extra) {
   try {
@@ -15,7 +29,20 @@ function postLog(msg, data, hypothesisId, extra) {
       ts: new Date().toISOString(),
     });
     if (typeof global !== 'undefined' && global.fetch) {
-      fetch(DEBUG_LOG_URL, { method: 'POST', body: payload, headers: { 'content-type': 'application/json' } }).catch(() => {});
+      // Try primary URL. If the bundle was built with a stale IP, also try fallbacks.
+      const candidates = [
+        DEBUG_LOG_URL,
+        `http://10.0.0.127:8787/log`,
+        `http://192.168.1.1:8787/log`,
+        `http://10.0.0.1:8787/log`,
+      ];
+      for (const u of candidates) {
+        fetch(u, {
+          method: 'POST',
+          body: payload,
+          headers: { 'content-type': 'application/json' },
+        }).catch(() => {});
+      }
     }
   } catch (_) {}
 }
@@ -35,13 +62,13 @@ export function installGlobalErrorTrap() {
     });
   }
 
-  // Capture unhandled promise rejections
-  if (typeof global.HermesInternal === 'undefined' && typeof global.addEventListener === 'function') {
+  // Capture unhandled promise rejections - works on Hermes
+  if (typeof global.addEventListener === 'function') {
     global.addEventListener('unhandledrejection', (e) => {
       const reason = e && (e.reason || e);
       postLog('UNHANDLED_REJECTION', { message: reason?.message, stack: reason?.stack }, 'GLOBAL', { kind: typeof reason });
     });
   }
-  postLog('TRAP_INSTALLED', { sessionId: DEBUG_SESSION_ID }, 'BOOT', null);
+  postLog('TRAP_INSTALLED', { sessionId: DEBUG_SESSION_ID, url: DEBUG_LOG_URL }, 'BOOT', null);
 }
 // #endregion

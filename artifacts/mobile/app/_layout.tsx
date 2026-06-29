@@ -11,11 +11,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { setBaseUrl, setApiToken } from "@remotectrl/api-client-react";
 import { colors } from "../constants/colors";
-import {
-  registerForPushNotifications,
-  installNotificationHandler,
-  setupNotificationHandler,
-} from "../lib/notifications";
 import { debugLog, installGlobalErrorTrap } from "../lib/debug-logger";
 
 // #region debug
@@ -47,25 +42,13 @@ const queryClient = new QueryClient({
 async function bootstrapBackground() {
   if (__sideEffectsDone) return;
   __sideEffectsDone = true;
-  debugLog("bootstrap_deferred_start", {}, "H1");
+  debugLog("bootstrap_deferred_start", {}, "BOOT");
   try {
     debugLog("splash_preventAutoHide_try", {}, "BOOT");
     await SplashScreen.preventAutoHideAsync();
     debugLog("splash_preventAutoHide_OK", {}, "BOOT");
   } catch (e: any) {
     debugLog("splash_preventAutoHide_FAIL", { msg: e?.message, stack: e?.stack }, "BOOT");
-  }
-  try {
-    debugLog("installNotificationHandler_try", {}, "H1");
-    await installNotificationHandler();
-  } catch (e: any) {
-    debugLog("installNotificationHandler_FAIL", { msg: e?.message }, "H1");
-  }
-  try {
-    debugLog("setupNotificationHandler_try", {}, "H1");
-    await setupNotificationHandler();
-  } catch (e: any) {
-    debugLog("setupNotificationHandler_FAIL", { msg: e?.message }, "H1");
   }
   try {
     const [savedUrl, savedToken] = await Promise.all([
@@ -78,14 +61,7 @@ async function bootstrapBackground() {
   } catch (e: any) {
     debugLog("loadAsyncStorageOverrides_FAIL", { msg: e?.message }, "H3");
   }
-  try {
-    debugLog("registerForPushNotifications_try", {}, "H1+H2");
-    await registerForPushNotifications();
-    debugLog("registerForPushNotifications_OK", {}, "H1+H2");
-  } catch (e: any) {
-    debugLog("registerForPushNotifications_FAIL", { msg: e?.message, stack: e?.stack }, "H1+H2");
-  }
-  debugLog("bootstrap_deferred_done", {}, "H1");
+  debugLog("bootstrap_deferred_done", {}, "BOOT");
 }
 
 export default function RootLayout() {
