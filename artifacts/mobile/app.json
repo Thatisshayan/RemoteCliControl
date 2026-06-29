@@ -2,7 +2,7 @@
   "expo": {
     "name": "RemoteCTRL",
     "slug": "remotectrl",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "scheme": "remotectrl",
     "userInterfaceStyle": "dark",
@@ -16,6 +16,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.remotectrl.app",
+      "buildNumber": "2",
       "infoPlist": {
         "NSFaceIDUsageDescription": "RemoteCTRL uses Face ID to lock the app and protect your server credentials.",
         "ITSAppUsesNonExemptEncryption": false
