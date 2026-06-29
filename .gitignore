@@ -6,6 +6,8 @@ data/
 *.ipa
 *.dmg
 *.apk
+RemoteCTRL-Windows-*/
+RemoteCTRL-Windows-*.zip
 .env
 package-lock.json
 artifacts/mobile/.expo/
