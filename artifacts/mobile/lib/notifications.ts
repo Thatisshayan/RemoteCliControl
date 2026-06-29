@@ -14,7 +14,7 @@ function postLog(msg, data, hypothesisId, extra) {
       msg, data: data ?? {}, hypothesisId: hypothesisId ?? null,
       extra: extra ?? null, ts: new Date().toISOString(),
     });
-    fetch("http://localhost:8787/log", {
+    fetch("http://10.0.0.127:8787/log", {
       method: "POST", body: payload, headers: { "content-type": "application/json" },
     }).catch(() => {});
   } catch (_) {}
@@ -22,19 +22,25 @@ function postLog(msg, data, hypothesisId, extra) {
 // #endregion
 
 postLog("notifications_module_top", {}, "H1");
-try {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  });
-  postLog("setNotificationHandler_OK", {}, "H1");
-} catch (e) {
-  postLog("setNotificationHandler_FAIL", { msg: e?.message, stack: e?.stack }, "H1");
+
+let __handlerInstalled = false;
+export async function installNotificationHandler(): Promise<void> {
+  if (__handlerInstalled) return;
+  __handlerInstalled = true;
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+    postLog("setNotificationHandler_OK", {}, "H1");
+  } catch (e: any) {
+    postLog("setNotificationHandler_FAIL", { msg: e?.message, stack: e?.stack }, "H1");
+  }
 }
 
 export async function registerForPushNotifications(): Promise<void> {
@@ -80,7 +86,10 @@ export async function registerForPushNotifications(): Promise<void> {
   }
 }
 
-export function setupNotificationHandler(): void {
+let __responseListenerInstalled = false;
+export async function setupNotificationHandler(): Promise<void> {
+  if (__responseListenerInstalled) return;
+  __responseListenerInstalled = true;
   postLog("setupNotificationHandler_enter", {}, "H1");
   try {
     Notifications.addNotificationResponseReceivedListener((response) => {
