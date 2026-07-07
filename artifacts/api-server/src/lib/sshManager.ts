@@ -77,7 +77,7 @@ async function acquireUtilityClient(): Promise<any> {
 
 export function resetUtilityClient() {
   if (utilityClient) {
-    try { utilityClient.end(); } catch {}
+    try { utilityClient.end(); } catch (err: any) { logger.warn({ err }, "Error ending utility client"); }
   }
   utilityClient = null;
   utilityBusy = false;
@@ -149,7 +149,7 @@ export function createSession(): Promise<{ id: string; title: string; status: st
         stream.on("data", (data: Buffer) => {
           const str = data.toString("utf8");
           for (const fn of session.listeners) {
-            try { fn(str); } catch {}
+            try { fn(str); } catch (err: any) { logger.warn({ err }, "Error in session listener"); }
           }
         });
 

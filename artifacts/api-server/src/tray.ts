@@ -57,6 +57,7 @@ async function main(): Promise<void> {
 
   let serverProcess: ChildProcess | null = null;
   let tunnelProcess: ChildProcess | null = null;
+  let statusInterval: ReturnType<typeof setInterval> | null = null;
 
   function startServer(): void {
     if (serverProcess) {
@@ -97,6 +98,7 @@ async function main(): Promise<void> {
   }
 
   function stopAll(): void {
+    if (statusInterval) { clearInterval(statusInterval); statusInterval = null; }
     if (tunnelProcess) { tunnelProcess.kill("SIGTERM"); tunnelProcess = null; }
     if (serverProcess) { serverProcess.kill(); serverProcess = null; }
   }
@@ -165,7 +167,7 @@ async function main(): Promise<void> {
       });
     };
     updateStatus();
-    setInterval(updateStatus, 10_000);
+    statusInterval = setInterval(updateStatus, 10_000);
   });
 
   systray.onClick((action) => {

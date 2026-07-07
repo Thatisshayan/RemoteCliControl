@@ -14,8 +14,10 @@ function validateConnectionInput(body: any): { ok: boolean; errors?: string[] } 
   if (typeof body.username !== "string" || body.username.length === 0) {
     errors.push("username: non-empty string");
   }
-  if (typeof body.password !== "string" || body.password.length === 0) {
-    errors.push("password: non-empty string");
+  if (!body.privateKey) {
+    if (typeof body.password !== "string" || body.password.length === 0) {
+      errors.push("password: required when no private key provided");
+    }
   }
   if (errors.length) return { ok: false, errors };
   return { ok: true };
@@ -74,7 +76,7 @@ router.post("/connections", (req, res) => {
   if (typeof host !== "string" || !host) return res.status(400).json({ error: "host: non-empty string required" });
   if (typeof port !== "number" || port < 1 || port > 65535) return res.status(400).json({ error: "port: integer 1-65535 required" });
   if (typeof username !== "string" || !username) return res.status(400).json({ error: "username: non-empty string required" });
-  if (typeof password !== "string" || !password) return res.status(400).json({ error: "password: non-empty string required" });
+  if (!privateKey && (typeof password !== "string" || !password)) return res.status(400).json({ error: "password: required when no private key provided" });
   const profile = addConnection({ name, host, port: Number(port), username, password: password || "", privateKey, passphrase });
   res.status(201).json(profile);
 });
