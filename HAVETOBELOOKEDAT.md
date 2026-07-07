@@ -72,6 +72,28 @@ This document lists items found during the code audit that require human verific
 
 ---
 
+## lib/api-client-react
+
+### 12. client.ts:2 - Unused API_TOKEN Variable
+**File:** `lib/api-client-react/src/client.ts:2`
+**Issue:** `const API_TOKEN` is declared but never used. The token is accessed directly from `globalThis` in the `request` function.
+**Question:** Should this variable be removed, or is it there for a reason?
+**Status:** NEEDS REVIEW
+
+### 13. hooks.ts:138-140 - useDownloadFile Missing Auth Token
+**File:** `lib/api-client-react/src/hooks.ts:138-140`
+**Issue:** `useDownloadFile` uses `fetch(url)` directly without passing the auth token. If the download endpoint requires authentication, this would fail.
+**Question:** Does the download endpoint require auth? If so, should the token be passed?
+**Status:** NEEDS REVIEW
+
+### 14. client.ts:13,27 - globalThis Type Casts
+**File:** `lib/api-client-react/src/client.ts:13,27`
+**Issue:** Multiple `(globalThis as any)` type casts to access/set `EXPO_PUBLIC_API_TOKEN`.
+**Question:** Is there a type-safe way to handle this in React Native?
+**Status:** NEEDS REVIEW
+
+---
+
 ## General
 
 ### 11. Multiple Empty Catch Blocks
