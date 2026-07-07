@@ -79,8 +79,12 @@ export default function ConnectionScreen() {
     setAuthMode("password");
   };
 
-  const handleActivate = (id: string) => {
-    activateProfile.mutateAsync(id);
+  const handleActivate = async (id: string) => {
+    try {
+      await activateProfile.mutateAsync(id);
+    } catch (err: any) {
+      Alert.alert("Error", err.message);
+    }
   };
 
   return (
@@ -136,7 +140,7 @@ export default function ConnectionScreen() {
         title="Delete Profile"
         message={deleteTarget ? `Remove "${deleteTarget.name}"?` : ""}
         items={[
-          { label: "Delete", destructive: true, onPress: () => { if (deleteTarget) deleteProfile.mutateAsync(deleteTarget.id); setDeleteTarget(null); } },
+          { label: "Delete", destructive: true, onPress: async () => { if (deleteTarget) { try { await deleteProfile.mutateAsync(deleteTarget.id); } catch (err: any) { Alert.alert("Error", err.message); } } setDeleteTarget(null); } },
         ]}
         onCancel={() => setDeleteTarget(null)}
       />
