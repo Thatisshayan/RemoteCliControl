@@ -136,7 +136,10 @@ export const useDownloadFile = () =>
   useMutation({
     mutationFn: (path: string) => {
       const url = `${getBaseUrl()}/files/download?path=${encodeURIComponent(path)}`;
-      return fetch(url).then((r) => r.blob());
+      const token = (globalThis as any).EXPO_PUBLIC_API_TOKEN;
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      return fetch(url, { headers }).then((r) => r.blob());
     },
   });
 

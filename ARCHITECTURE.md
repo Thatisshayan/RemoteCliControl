@@ -18,7 +18,7 @@ RemoteCTRL is a full-stack mobile SSH control application. A Node.js backend run
 │  └────────────────────────────┬────────────────────────────────┘│
 │                               │                                  │
 │  ┌────────────────────────────▼────────────────────────────┐    │
-│  │  expo-notifications ← Expo Push API                     │    │
+│  │  expo-notifications ← Expo Push API  (DISABLED — see note) │  │
 │  │  Session disconnect / server health alerts              │    │
 │  └────────────────────────────┬────────────────────────────┘    │
 └───────────────────────────────│──────────────────────────────────┘
@@ -207,11 +207,11 @@ File-backed persistence. State is loaded from `data/store.json` on startup. Ever
 }
 ```
 
-Safe exports (`getActiveConnectionSafe`, `getConnectionsSafe`) return `password: "***"` for API responses. Full credentials are only accessed internally by `sshManager.ts`.
+Safe exports (`getActiveConnectionSafe`, `getConnectionsSafe`) return `password: "***"` for API responses. Full credentials are only accessed internally by `sshManager.ts`. `password`/`privateKey`/`passphrase` are encrypted at rest in `data/store.json` via `credentialCrypto.ts` (AES-256-GCM, key in `data/store.key`) — in-memory state stays plaintext for `sshManager.ts`, only the on-disk copy is encrypted.
 
 ### `pushNotifications.ts`
 
-Expo Push API integration. Uses `expo-server-sdk` to send push notifications to registered devices.
+Expo Push API integration. Uses `expo-server-sdk` to send push notifications to registered devices. **Mobile-side `expo-notifications` is currently disabled** (see `3f71496` — isolating a cold-start crash), so this backend code path has no live receiver until the mobile app re-enables it; the server-side send logic still works and is exercised by tests.
 
 | Export | Purpose |
 |--------|---------|

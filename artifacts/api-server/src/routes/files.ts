@@ -4,6 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { getSftp, execCommand } from "../lib/sshManager.js";
+import logger from "../lib/logger.js";
 const router = Router();
 // Disk-backed storage instead of memoryStorage: buffering a 100MB upload
 // fully in memory can exhaust RAM on the same machine the user is
@@ -97,7 +98,8 @@ router.get("/files", async (req: Request, res: Response, next: NextFunction) => 
             modifiedAt: new Date(attrs.mtime * 1000).toISOString(),
             permissions: attrs.mode?.toString(8) || "",
           };
-        } catch {
+        } catch (err: any) {
+          logger.debug({ err, path: fullPath }, "Failed to stat file, using defaults");
           return { name: item.filename, path: fullPath, type: "file" as const, size: 0, modifiedAt: "", permissions: "" };
         }
       })

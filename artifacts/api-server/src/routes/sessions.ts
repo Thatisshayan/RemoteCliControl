@@ -26,7 +26,9 @@ router.delete("/sessions/:id", (req, res) => {
 router.patch("/sessions/:id", (req, res) => {
   const session = getSession(req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found" });
-  if (req.body.title) session.title = req.body.title;
+  if (req.body.title && typeof req.body.title === "string" && req.body.title.trim().length > 0) {
+    session.title = req.body.title.trim().slice(0, 100);
+  }
   res.json({ id: session.id, title: session.title, status: session.status, createdAt: session.createdAt.toISOString() });
 });
 

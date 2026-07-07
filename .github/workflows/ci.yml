@@ -224,15 +224,9 @@ jobs:
                     {
                       "type": "section",
                       "fields": [
-                        { "type": "mrkdwn", "text": "*lint (18):* ${{ needs.lint.result == 'success' && ':white_check_mark:' || ':x:' }}" },
-                        { "type": "mrkdwn", "text": "*lint (20):* ${{ needs.lint.result == 'success' && ':white_check_mark:' || ':x:' }}" },
-                        { "type": "mrkdwn", "text": "*lint (22):* ${{ needs.lint.result == 'success' && ':white_check_mark:' || ':x:' }}" },
-                        { "type": "mrkdwn", "text": "*test (18):* ${{ needs.test.result == 'success' && ':white_check_mark:' || ':x:' }}" },
-                        { "type": "mrkdwn", "text": "*test (20):* ${{ needs.test.result == 'success' && ':white_check_mark:' || ':x:' }}" },
-                        { "type": "mrkdwn", "text": "*test (22):* ${{ needs.test.result == 'success' && ':white_check_mark:' || ':x:' }}" },
-                        { "type": "mrkdwn", "text": "*build-server (18):* ${{ needs.build-server.result == 'success' && ':white_check_mark:' || ':x:' }}" },
-                        { "type": "mrkdwn", "text": "*build-server (20):* ${{ needs.build-server.result == 'success' && ':white_check_mark:' || ':x:' }}" },
-                        { "type": "mrkdwn", "text": "*build-server (22):* ${{ needs.build-server.result == 'success' && ':white_check_mark:' || ':x:' }}" },
+                        { "type": "mrkdwn", "text": "*lint (Node 20/22):* ${{ needs.lint.result == 'success' && ':white_check_mark:' || ':x:' }}" },
+                        { "type": "mrkdwn", "text": "*test (Node 20/22):* ${{ needs.test.result == 'success' && ':white_check_mark:' || ':x:' }}" },
+                        { "type": "mrkdwn", "text": "*build-server (Node 20/22):* ${{ needs.build-server.result == 'success' && ':white_check_mark:' || ':x:' }}" },
                         { "type": "mrkdwn", "text": "*typecheck-mobile:* ${{ needs.typecheck-mobile.result == 'success' && ':white_check_mark:' || ':x:' }}" }
                       ]
                     }

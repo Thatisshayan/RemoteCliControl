@@ -24,6 +24,7 @@
     },
     "preview": {
       "distribution": "internal",
+      "autoIncrement": true,
       "ios": {
         "simulator": false,
         "image": "latest"
@@ -34,6 +35,7 @@
     },
     "production": {
       "distribution": "store",
+      "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_DOMAIN": "https://register-undergraduate-requirement-matter.trycloudflare.com"
       }
@@ -44,9 +46,9 @@
     "preview": {
       "ios": {
         "ascAppId": "6785305125",
-        "ascApiKeyPath": "D:\\AgentDevWork\\repos\\AuthKey_RY256KG775.p8",
-        "ascApiKeyId": "RY256KG775",
-        "ascApiKeyIssuerId": "53ab7137-7ff1-4f89-a821-821a4999901e"
+        "ascApiKeyPath": "$EXPO_ASC_API_KEY_PATH",
+        "ascApiKeyId": "$EXPO_ASC_API_KEY_ID",
+        "ascApiKeyIssuerId": "$EXPO_ASC_API_KEY_ISSUER_ID"
       }
     }
   }

@@ -1,5 +1,4 @@
 let baseUrl = "http://localhost:3000";
-const API_TOKEN = typeof globalThis !== "undefined" ? (globalThis as any).EXPO_PUBLIC_API_TOKEN : undefined;
 
 export function setBaseUrl(url: string) {
   baseUrl = url.replace(/\/$/, "");

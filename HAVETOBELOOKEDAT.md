@@ -18,17 +18,15 @@ This document lists items found during the code audit that require human verific
 **Question:** Is this intentional? Should password be optional when privateKey is provided?
 **Status:** NEEDS REVIEW
 
-### 3. files.ts:100 - Empty Catch Block in Directory Listing
+### 3. ~~files.ts:100 - Empty Catch Block in Directory Listing~~
 **File:** `artifacts/api-server/src/routes/files.ts:100`
-**Issue:** Empty catch block when stat-ing files during directory listing. If a file can't be stat'd, it silently falls back to defaults.
-**Question:** Is this acceptable behavior, or should errors be logged?
-**Status:** NEEDS REVIEW
+**Issue:** Empty catch block when stat-ing files during directory listing.
+**Status:** FIXED - Added debug logging
 
-### 4. sessions.ts:29 - No Validation on Session Title Update
+### 4. ~~sessions.ts:29 - No Validation on Session Title Update~~
 **File:** `artifacts/api-server/src/routes/sessions.ts:29`
-**Issue:** `PATCH /sessions/:id` accepts `req.body.title` without any type or length validation. A client could send a non-string value or extremely long title.
-**Question:** Should there be validation on the title field?
-**Status:** NEEDS REVIEW
+**Issue:** `PATCH /sessions/:id` accepts `req.body.title` without any type or length validation.
+**Status:** FIXED - Added type check, trim, and max 100 char limit
 
 ### 5. sshManager.ts:80,152 - Empty Catch Blocks
 **File:** `artifacts/api-server/src/lib/sshManager.ts:80,152`
@@ -74,17 +72,15 @@ This document lists items found during the code audit that require human verific
 
 ## lib/api-client-react
 
-### 12. client.ts:2 - Unused API_TOKEN Variable
+### 12. ~~client.ts:2 - Unused API_TOKEN Variable~~
 **File:** `lib/api-client-react/src/client.ts:2`
-**Issue:** `const API_TOKEN` is declared but never used. The token is accessed directly from `globalThis` in the `request` function.
-**Question:** Should this variable be removed, or is it there for a reason?
-**Status:** NEEDS REVIEW
+**Issue:** `const API_TOKEN` is declared but never used.
+**Status:** FIXED - Removed unused variable
 
-### 13. hooks.ts:138-140 - useDownloadFile Missing Auth Token
+### 13. ~~hooks.ts:138-140 - useDownloadFile Missing Auth Token~~
 **File:** `lib/api-client-react/src/hooks.ts:138-140`
-**Issue:** `useDownloadFile` uses `fetch(url)` directly without passing the auth token. If the download endpoint requires authentication, this would fail.
-**Question:** Does the download endpoint require auth? If so, should the token be passed?
-**Status:** NEEDS REVIEW
+**Issue:** `useDownloadFile` uses `fetch(url)` directly without passing the auth token.
+**Status:** FIXED - Added auth token header
 
 ### 14. client.ts:13,27 - globalThis Type Casts
 **File:** `lib/api-client-react/src/client.ts:13,27`

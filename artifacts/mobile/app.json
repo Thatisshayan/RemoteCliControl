@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.remotectrl.app",
-      "buildNumber": "4",
+      "buildNumber": "6",
       "infoPlist": {
         "NSFaceIDUsageDescription": "RemoteCTRL uses Face ID to lock the app and protect your server credentials.",
         "ITSAppUsesNonExemptEncryption": false
@@ -42,7 +42,8 @@
       "expo-font",
       "expo-local-authentication",
       "expo-secure-store",
-      "expo-dev-client"
+      "expo-dev-client",
+      "@sentry/react-native/expo"
     ],
     "extra": {
       "router": {

@@ -9,5 +9,5 @@ services:
       - ./data:/app/data
     environment:
       - PORT=3000
-      - API_TOKEN=${API_TOKEN:-change_me}
+      - API_TOKEN=${API_TOKEN:?API_TOKEN must be set in .env — refusing to start with a default/empty token}
     restart: unless-stopped

@@ -17,6 +17,7 @@
     "@react-navigation/native": "^7.0.0",
     "@remotectrl/api-client-react": "workspace:*",
     "@remotectrl/api-zod": "workspace:*",
+    "@sentry/react-native": "^8.16.0",
     "@tanstack/react-query": "^5.0.0",
     "expo": "~52.0.0",
     "expo-clipboard": "~7.0.0",
