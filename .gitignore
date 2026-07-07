@@ -6,6 +6,7 @@ data/
 *.ipa
 *.dmg
 *.apk
+*.p8
 RemoteCTRL-Windows-*/
 RemoteCTRL-Windows-*.zip
 .env
