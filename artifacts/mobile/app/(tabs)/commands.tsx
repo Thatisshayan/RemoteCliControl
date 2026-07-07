@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Alert } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
@@ -36,18 +36,26 @@ export default function CommandsScreen() {
     router.push(`/session/${activeSessions[0].id}?prefill=${encodeURIComponent(cmd.command)}`);
   };
 
-  const handleDelete = (cmd: SavedCommand) => {
+  const handleDelete = async (cmd: SavedCommand) => {
     setSelectedCmd(null);
-    deleteCommand.mutateAsync(cmd.id);
+    try {
+      await deleteCommand.mutateAsync(cmd.id);
+    } catch (err: any) {
+      Alert.alert("Error", err.message);
+    }
   };
 
   const handleSave = async () => {
     if (!label.trim() || !command.trim()) return;
-    await createCommand.mutateAsync({ label: label.trim(), command: command.trim(), description: description.trim() });
-    setShowModal(false);
-    setLabel("");
-    setCommand("");
-    setDescription("");
+    try {
+      await createCommand.mutateAsync({ label: label.trim(), command: command.trim(), description: description.trim() });
+      setShowModal(false);
+      setLabel("");
+      setCommand("");
+      setDescription("");
+    } catch (err: any) {
+      Alert.alert("Error", err.message);
+    }
   };
 
   return (

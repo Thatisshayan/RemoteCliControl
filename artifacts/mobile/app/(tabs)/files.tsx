@@ -64,9 +64,14 @@ export default function FilesScreen() {
     }
   };
 
-  const handleDelete = (item: FileItem) => {
+  const handleDelete = async (item: FileItem) => {
     setSelectedFile(null);
-    deleteFile.mutateAsync(item.path).then(() => refetch());
+    try {
+      await deleteFile.mutateAsync(item.path);
+      refetch();
+    } catch (err: any) {
+      Alert.alert("Error", err.message);
+    }
   };
 
   const handlePreview = async (item: FileItem) => {
@@ -115,10 +120,13 @@ export default function FilesScreen() {
       const remotePath = currentPath.endsWith("/") ? currentPath + filename : currentPath + "/" + filename;
       const formData = new FormData();
       formData.append("file", { uri: asset.uri, name: filename, type: asset.mimeType || "application/octet-stream" } as any);
-      await fetch(`${BASE_URL}/api/files/upload?path=${encodeURIComponent(remotePath)}`, {
+      const res = await fetch(`${BASE_URL}/api/files/upload?path=${encodeURIComponent(remotePath)}`, {
         method: "POST",
         body: formData,
       });
+      if (!res.ok) {
+        throw new Error(`Upload failed: ${res.status}`);
+      }
       refetch();
     } catch (err: any) {
       Alert.alert("Upload Error", err.message);
