@@ -10,13 +10,12 @@ This document lists items found during the code audit that require human verific
 **File:** `artifacts/api-server/src/routes/connection.ts:65-68`
 **Issue:** The `GET /connections/active` endpoint calls `getActiveConnection()` which returns the full connection object including password/privateKey/passphrase, then sends it directly to the client.
 **Question:** Is this intentional? The mobile client needs credentials for SSH, but exposing them via API could be a security concern depending on the threat model.
-**Status:** NEEDS REVIEW
+**Status:** NEEDS REVIEW - Likely intentional (mobile needs creds for SSH)
 
-### 2. connection.ts:17-19,77 - Password Required Even for SSH Key Auth
+### 2. ~~connection.ts:17-19,77 - Password Required Even for SSH Key Auth~~
 **File:** `artifacts/api-server/src/routes/connection.ts:17-19,77`
 **Issue:** Both `validateConnectionInput()` and the `POST /connections` endpoint require `password` to be a non-empty string. This means SSH key-only authentication (without a password) would fail validation.
-**Question:** Is this intentional? Should password be optional when privateKey is provided?
-**Status:** NEEDS REVIEW
+**Status:** FIXED - Password now optional when privateKey provided
 
 ### 3. ~~files.ts:100 - Empty Catch Block in Directory Listing~~
 **File:** `artifacts/api-server/src/routes/files.ts:100`
@@ -28,23 +27,20 @@ This document lists items found during the code audit that require human verific
 **Issue:** `PATCH /sessions/:id` accepts `req.body.title` without any type or length validation.
 **Status:** FIXED - Added type check, trim, and max 100 char limit
 
-### 5. sshManager.ts:80,152 - Empty Catch Blocks
+### ~~5. sshManager.ts:80,152 - Empty Catch Blocks~~
 **File:** `artifacts/api-server/src/lib/sshManager.ts:80,152`
 **Issue:** Empty catch blocks when calling `utilityClient.end()` and when invoking listener callbacks.
-**Question:** Are these intentionally silent, or should errors be logged?
-**Status:** NEEDS REVIEW
+**Status:** FIXED - Added logger.warn for both catch blocks
 
-### 6. tray.ts:168 - setInterval Never Cleared
+### ~~6. tray.ts:168 - setInterval Never Cleared~~
 **File:** `artifacts/api-server/src/tray.ts:168`
 **Issue:** `setInterval(updateStatus, 10_000)` is never cleared. If the tray exits via `systray.onExit`, the interval could fire after process exit is initiated.
-**Question:** Should the interval be stored and cleared on exit?
-**Status:** NEEDS REVIEW
+**Status:** FIXED - Interval now stored in statusInterval and cleared in stopAll()
 
 ### 7. processes.ts:38 - Command Injection Risk?
 **File:** `artifacts/api-server/src/routes/processes.ts:38`
 **Issue:** The PID is validated with regex `/^\d+$/` before being interpolated into a PowerShell command. The regex validation appears sufficient, but command injection via SSH to a remote Windows machine is a high-severity concern.
-**Question:** Is the regex validation sufficient, or should additional precautions be taken?
-**Status:** NEEDS REVIEW
+**Status:** NEEDS REVIEW - Regex appears sufficient, but confirm no injection via SSH
 
 ---
 
