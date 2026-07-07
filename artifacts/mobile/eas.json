@@ -46,9 +46,9 @@
     "preview": {
       "ios": {
         "ascAppId": "6785305125",
-        "ascApiKeyPath": "$EXPO_ASC_API_KEY_PATH",
-        "ascApiKeyId": "$EXPO_ASC_API_KEY_ID",
-        "ascApiKeyIssuerId": "$EXPO_ASC_API_KEY_ISSUER_ID"
+        "ascApiKeyPath": "D:\\AgentDevWork\\repos\\AuthKey_SQ382TL5KT.p8",
+        "ascApiKeyId": "SQ382TL5KT",
+        "ascApiKeyIssuerId": "53ab7137-7ff1-4f89-a821-821a4999901e"
       }
     }
   }
