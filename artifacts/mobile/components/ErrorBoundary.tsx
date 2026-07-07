@@ -1,5 +1,8 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
+import { Sentry } from "../lib/sentry";
 import { colors } from "../constants/colors";
 
 interface Props { children: React.ReactNode; }
@@ -12,7 +15,25 @@ export default class ErrorBoundary extends React.Component<Props, State> {
     return { hasError: true, error: error.message };
   }
 
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    Sentry.captureException(error, { extra: { componentStack: info.componentStack } });
+  }
+
   handleRetry = () => {
+    // A plain re-render doesn't help if the crash was caused by cached state
+    // (a bad server URL or stale token) — retrying with the same state just
+    // reproduces the same error. This clears connection settings too, so a
+    // retry actually has a chance of succeeding.
+    this.setState({ hasError: false, error: null });
+  };
+
+  handleResetConnection = async () => {
+    try {
+      await AsyncStorage.removeItem("server-url");
+      await SecureStore.deleteItemAsync("api-token");
+    } catch {
+      // best effort
+    }
     this.setState({ hasError: false, error: null });
   };
 
@@ -24,6 +45,9 @@ export default class ErrorBoundary extends React.Component<Props, State> {
           <Text style={styles.message}>{this.state.error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={this.handleRetry}>
             <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.resetBtn} onPress={this.handleResetConnection}>
+            <Text style={styles.resetText}>Reset Connection Settings</Text>
           </TouchableOpacity>
         </View>
       );
@@ -38,4 +62,6 @@ const styles = StyleSheet.create({
   message: { color: colors.mutedForeground, fontSize: 14, textAlign: "center", marginBottom: 20 },
   retryBtn: { backgroundColor: colors.primary, borderRadius: 8, paddingVertical: 12, paddingHorizontal: 24 },
   retryText: { color: colors.primaryForeground, fontWeight: "700", fontSize: 16 },
+  resetBtn: { marginTop: 12, paddingVertical: 12, paddingHorizontal: 24 },
+  resetText: { color: colors.mutedForeground, fontWeight: "600", fontSize: 14 },
 });
