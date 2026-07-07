@@ -17,7 +17,10 @@ const getDebugBaseUrl = () => {
 };
 const DEBUG_LOG_URL = getDebugBaseUrl();
 
-function postLog(msg, data, hypothesisId, extra) {
+function postLog(msg: string, data: unknown, hypothesisId: string | null, extra: unknown) {
+  // Never phone home to hardcoded LAN IPs from a production build — this is
+  // dev-only crash-bisection instrumentation, not a shipped feature.
+  if (typeof __DEV__ !== 'undefined' && !__DEV__) return;
   try {
     const payload = JSON.stringify({
       sessionId: DEBUG_SESSION_ID,
@@ -32,9 +35,7 @@ function postLog(msg, data, hypothesisId, extra) {
       // Try primary URL. If the bundle was built with a stale IP, also try fallbacks.
       const candidates = [
         DEBUG_LOG_URL,
-        `http://10.0.0.127:8787/log`,
-        `http://192.168.1.1:8787/log`,
-        `http://10.0.0.1:8787/log`,
+        ...RIG_HOST_CANDIDATES.filter(h => !DEBUG_LOG_URL.includes(h)).map(h => `http://${h}:8787/log`),
       ];
       for (const u of candidates) {
         fetch(u, {
@@ -47,11 +48,12 @@ function postLog(msg, data, hypothesisId, extra) {
   } catch (_) {}
 }
 
-export const debugLog = (msg, data, hypothesisId) => {
+export const debugLog = (msg: string, data: unknown, hypothesisId: string | null) => {
   postLog(msg, data, hypothesisId, null);
 };
 
 export function installGlobalErrorTrap() {
+  if (typeof __DEV__ !== 'undefined' && !__DEV__) return;
   // Capture JS errors before React tree mounts
   const ErrorUtils = global.ErrorUtils;
   if (ErrorUtils && typeof ErrorUtils.setGlobalHandler === 'function') {
