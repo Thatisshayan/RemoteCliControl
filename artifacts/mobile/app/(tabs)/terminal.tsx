@@ -47,12 +47,18 @@ export default function TerminalScreen() {
     }
     try {
       await renameSession.mutateAsync({ id: renamingId, title: renameText.trim() });
-    } catch {}
+    } catch (err: any) {
+      Alert.alert("Error", err.message);
+    }
     setRenamingId(null);
   };
 
-  const handleClose = (id: string) => {
-    closeSession.mutateAsync(id);
+  const handleClose = async (id: string) => {
+    try {
+      await closeSession.mutateAsync(id);
+    } catch (err: any) {
+      Alert.alert("Error", err.message);
+    }
   };
 
   return (

@@ -5,6 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
 import { setBaseUrl, setApiToken, getBaseUrl } from "@remotectrl/api-client-react";
 import { colors } from "../../constants/colors";
+import { getStoredApiToken, setStoredApiToken } from "../../lib/secure-token";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -23,7 +24,9 @@ export default function SettingsScreen() {
       const base = getBaseUrl();
       const res = await fetch(`${base}/health`, { signal: AbortSignal.timeout(3000) });
       if (res.ok) setHealth(await res.json());
-    } catch {}
+    } catch (err: any) {
+      console.warn("Failed to fetch health:", err?.message);
+    }
   }, []);
 
   const fetchPushPreferences = useCallback(async () => {
@@ -31,17 +34,21 @@ export default function SettingsScreen() {
       const base = getBaseUrl();
       const res = await fetch(`${base}/api/push/preferences`, { signal: AbortSignal.timeout(3000) });
       if (res.ok) setPushPerms(await res.json());
-    } catch {}
+    } catch (err: any) {
+      console.warn("Failed to fetch push preferences:", err?.message);
+    }
   }, []);
 
   useEffect(() => {
-    AsyncStorage.multiGet(["server-url", "api-token", "biometric-lock", "terminal-font-size"]).then((values) => {
+    AsyncStorage.multiGet(["server-url", "biometric-lock", "terminal-font-size"]).then((values) => {
       for (const [key, val] of values) {
         if (key === "server-url" && val) setServerUrl(val);
-        if (key === "api-token" && val) setApiTokenState(val);
         if (key === "terminal-font-size" && val) setFontSizeState(Number(val));
         if (key === "biometric-lock") setBiometricEnabled(val === "true");
       }
+    });
+    getStoredApiToken().then((val) => {
+      if (val) setApiTokenState(val);
     });
     fetchHealth();
     fetchPushPreferences();
@@ -57,7 +64,7 @@ export default function SettingsScreen() {
   };
 
   const handleSaveToken = async () => {
-    await AsyncStorage.setItem("api-token", apiToken);
+    await setStoredApiToken(apiToken);
     setApiToken(apiToken);
     Alert.alert("Saved", "API token updated");
   };
@@ -99,7 +106,9 @@ export default function SettingsScreen() {
         body: JSON.stringify({ [key]: value }),
       });
       if (res.ok) setPushPerms(await res.json());
-    } catch {}
+    } catch (err: any) {
+      console.warn("Failed to update push preference:", err?.message);
+    }
   };
 
   const handlePushPreferenceToggle = async (key: "sessionDisconnected" | "serverHealthChange", val: boolean) => {
@@ -111,7 +120,9 @@ export default function SettingsScreen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ [key]: val }),
       });
-    } catch {}
+    } catch (err: any) {
+      console.warn("Failed to update push preference:", err?.message);
+    }
   };
 
   const handleClearData = () => {

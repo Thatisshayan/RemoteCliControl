@@ -5,6 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
 import { setApiToken } from "@remotectrl/api-client-react";
 import { colors } from "../../constants/colors";
+import { setStoredApiToken } from "../../lib/secure-token";
 
 export default function ApiTokenScreen() {
   const router = useRouter();
@@ -13,7 +14,7 @@ export default function ApiTokenScreen() {
 
   const handleContinue = async () => {
     if (token.trim()) {
-      await AsyncStorage.setItem("api-token", token.trim());
+      await setStoredApiToken(token.trim());
       setApiToken(token.trim());
     }
     await AsyncStorage.setItem("onboardingComplete", "true");

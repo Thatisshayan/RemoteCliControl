@@ -12,6 +12,10 @@ import ErrorBoundary from "../components/ErrorBoundary";
 import { setBaseUrl, setApiToken } from "@remotectrl/api-client-react";
 import { colors } from "../constants/colors";
 import { debugLog, installGlobalErrorTrap } from "../lib/debug-logger";
+import { getStoredApiToken } from "../lib/secure-token";
+import { initSentry, Sentry } from "../lib/sentry";
+
+initSentry();
 
 // #region debug
 let __sideEffectsDone = false;
@@ -53,7 +57,7 @@ async function bootstrapBackground() {
   try {
     const [savedUrl, savedToken] = await Promise.all([
       AsyncStorage.getItem("server-url"),
-      AsyncStorage.getItem("api-token"),
+      getStoredApiToken(),
     ]);
     debugLog("loadAsyncStorageOverrides_done", { savedUrl, hasToken: !!savedToken }, "H3");
     if (savedUrl) setBaseUrl(savedUrl);
@@ -64,7 +68,9 @@ async function bootstrapBackground() {
   debugLog("bootstrap_deferred_done", {}, "BOOT");
 }
 
-export default function RootLayout() {
+export default Sentry.wrap(RootLayout);
+
+function RootLayout() {
   debugLog("function_render_first_time_unconditional", {}, "BOOT");
   const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
 

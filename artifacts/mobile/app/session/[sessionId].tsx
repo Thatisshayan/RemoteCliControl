@@ -88,7 +88,10 @@ export default function SessionScreen() {
     const isHttps = DOMAIN_RAW.startsWith("https") || (Platform.OS === "web" && location.protocol === "https:");
     const protocol = isHttps ? "wss:" : "ws:";
     const url = `${protocol}//${DOMAIN}/api/ws/terminal/${sessionId}`;
-    const ws = new WebSocket(url);
+    // Token travels as a WS subprotocol (not a query param) so it doesn't
+    // land in access/proxy/edge logs.
+    const token = (globalThis as any).EXPO_PUBLIC_API_TOKEN as string | undefined;
+    const ws = token ? new WebSocket(url, [token]) : new WebSocket(url);
     wsRef.current = ws;
 
     ws.onopen = () => {

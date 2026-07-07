@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useGetProcesses, useKillProcess } from "@remotectrl/api-client-react";
 import Card from "../../components/ui/Card";
@@ -92,7 +92,7 @@ export default function ProcessesScreen() {
         title="Kill Process"
         message={killTarget ? `Kill "${killTarget.name}" (PID ${killTarget.pid})?` : ""}
         items={[
-          { label: "Kill", destructive: true, onPress: () => { if (killTarget) killProcess.mutateAsync(killTarget.pid); setKillTarget(null); } },
+          { label: "Kill", destructive: true, onPress: async () => { if (killTarget) { try { await killProcess.mutateAsync(killTarget.pid); } catch (err: any) { Alert.alert("Error", err.message); } } setKillTarget(null); } },
         ]}
         onCancel={() => setKillTarget(null)}
       />
