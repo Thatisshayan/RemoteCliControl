@@ -1,8 +1,16 @@
 import { Router, Request, Response, NextFunction } from "express";
 import multer from "multer";
+import fs from "fs";
+import os from "os";
+import path from "path";
 import { getSftp, execCommand } from "../lib/sshManager.js";
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+// Disk-backed storage instead of memoryStorage: buffering a 100MB upload
+// fully in memory can exhaust RAM on the same machine the user is
+// remoting into, especially with several concurrent uploads.
+const UPLOAD_TMP_DIR = path.join(os.tmpdir(), "remotectrl-uploads");
+fs.mkdirSync(UPLOAD_TMP_DIR, { recursive: true });
+const upload = multer({ dest: UPLOAD_TMP_DIR, limits: { fileSize: 100 * 1024 * 1024 } });
 
 function sanitizePath(p: string): string {
   if (p.includes("..")) throw new Error("Invalid path");
@@ -126,14 +134,20 @@ router.post("/files/upload", upload.single("file"), async (req: Request, res: Re
     if (err) return res.status(400).json({ error: err });
     const sftp = await getSftp();
     await new Promise<void>((resolve, reject) => {
-      const stream = sftp.createWriteStream(remotePath);
-      stream.on("close", () => resolve());
-      stream.on("error", reject);
-      stream.end(req.file!.buffer);
+      const readStream = fs.createReadStream(req.file!.path);
+      const writeStream = sftp.createWriteStream(remotePath);
+      writeStream.on("close", () => resolve());
+      writeStream.on("error", reject);
+      readStream.on("error", reject);
+      readStream.pipe(writeStream);
     });
     res.json({ success: true });
   } catch (e: any) {
     next(e);
+  } finally {
+    if (req.file) {
+      fs.unlink(req.file.path, () => {});
+    }
   }
 });
 

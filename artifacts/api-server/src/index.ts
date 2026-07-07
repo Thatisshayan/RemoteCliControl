@@ -11,15 +11,22 @@ if (!PORT) {
   throw new Error("PORT environment variable is required");
 }
 
+const tunnelEnabled = process.env.CLOUDFLARE_TUNNEL === "true" || process.env.CLOUDFLARE_TUNNEL === "1";
+
 if (!API_TOKEN) {
-  logger.warn("API_TOKEN not set — running in unauthenticated mode");
+  if (tunnelEnabled) {
+    throw new Error(
+      "API_TOKEN environment variable is required when CLOUDFLARE_TUNNEL is enabled — refusing to start an unauthenticated server exposed to the internet."
+    );
+  }
+  logger.warn("API_TOKEN not set — running in unauthenticated mode (local only, no tunnel)");
 }
 
 const server = app.listen(Number(PORT), async () => {
   logger.info(`Server running on port ${PORT}`);
   setupWebSocket(server);
 
-  if (process.env.CLOUDFLARE_TUNNEL === "true" || process.env.CLOUDFLARE_TUNNEL === "1") {
+  if (tunnelEnabled) {
     try {
       const url = await startTunnel(Number(PORT));
       if (url) {

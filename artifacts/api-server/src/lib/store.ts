@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { encryptCredential, decryptCredential } from "./credentialCrypto.js";
 
 interface ConnectionProfile {
   id: string;
@@ -48,11 +49,22 @@ function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
 
+function decryptConnection(c: ConnectionProfile): ConnectionProfile {
+  return {
+    ...c,
+    password: decryptCredential(c.password) ?? "",
+    privateKey: decryptCredential(c.privateKey),
+    passphrase: decryptCredential(c.passphrase),
+  };
+}
+
 function loadState(): StoreState {
   try {
     if (fs.existsSync(FILE_PATH)) {
       const raw = fs.readFileSync(FILE_PATH, "utf8");
-      return JSON.parse(raw);
+      const parsed: StoreState = JSON.parse(raw);
+      parsed.connections = (parsed.connections || []).map(decryptConnection);
+      return parsed;
     }
   } catch (e) {
     // corrupted or missing
@@ -62,11 +74,28 @@ function loadState(): StoreState {
 
 let state: StoreState = loadState();
 
+// One-time migration: re-persist immediately so any legacy plaintext
+// credentials on disk get encrypted without waiting for the next edit.
+if (state.connections.length > 0) {
+  persist();
+}
+
 function persist() {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   }
-  fs.writeFileSync(FILE_PATH, JSON.stringify(state, null, 2));
+  // In-memory state stays plaintext (sshManager needs real credentials);
+  // only the on-disk copy is encrypted.
+  const onDisk: StoreState = {
+    ...state,
+    connections: state.connections.map((c) => ({
+      ...c,
+      password: encryptCredential(c.password) ?? "",
+      privateKey: encryptCredential(c.privateKey),
+      passphrase: encryptCredential(c.passphrase),
+    })),
+  };
+  fs.writeFileSync(FILE_PATH, JSON.stringify(onDisk, null, 2));
 }
 
 // Connection (active profile) helpers

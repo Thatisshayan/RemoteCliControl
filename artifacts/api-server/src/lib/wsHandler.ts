@@ -5,11 +5,17 @@ const { WebSocketServer } = require("ws") as typeof import("ws");
 import type { Server } from "http";
 import { addOutputListener, getSession, sendToSession, resizeSession } from "./sshManager.js";
 import logger from "./logger.js";
+import { timingSafeTokenEqual } from "./auth.js";
 
 const MAX_BUFFER = 64 * 1024;
 
 export function setupWebSocket(server: Server) {
-  const wss = new WebSocketServer({ noServer: true });
+  const wss = new WebSocketServer({
+    noServer: true,
+    // Echo back the client's offered subprotocol (the token) so the
+    // handshake completes — the client uses it purely as a token carrier.
+    handleProtocols: (protocols: Set<string>) => protocols.values().next().value ?? false,
+  });
   const buffers = new Map<any, string>();
 
   server.on("upgrade", (request, socket, head) => {
@@ -21,9 +27,14 @@ export function setupWebSocket(server: Server) {
       return;
     }
 
-    const token = url.searchParams.get("token");
+    // Token travels as a WebSocket subprotocol rather than a URL query param
+    // so it doesn't get written into access/proxy/edge logs.
+    const protocolHeader = request.headers["sec-websocket-protocol"];
+    const token = Array.isArray(protocolHeader)
+      ? protocolHeader[0]
+      : protocolHeader?.split(",")[0]?.trim();
     const API_TOKEN = process.env.API_TOKEN;
-    if (API_TOKEN && token !== API_TOKEN) {
+    if (API_TOKEN && (!token || !timingSafeTokenEqual(token, API_TOKEN))) {
       socket.destroy();
       return;
     }

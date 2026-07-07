@@ -61,10 +61,27 @@ describe("auth.ts middleware", () => {
     const mockReq = { headers: { authorization: "Bearer test-token" } };
     const mockRes = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() };
     const mockNext = vi.fn();
-    
+
     authMiddleware(mockReq as any, mockRes as any, mockNext);
-    
+
     expect(mockNext).toHaveBeenCalled();
     expect(mockRes.status).not.toHaveBeenCalled();
+  });
+});
+
+describe("timingSafeTokenEqual", () => {
+  it("returns true for identical strings", async () => {
+    const { timingSafeTokenEqual } = await import("../auth.js");
+    expect(timingSafeTokenEqual("abc123", "abc123")).toBe(true);
+  });
+
+  it("returns false for different strings of the same length", async () => {
+    const { timingSafeTokenEqual } = await import("../auth.js");
+    expect(timingSafeTokenEqual("abc123", "abc124")).toBe(false);
+  });
+
+  it("returns false for strings of different lengths without throwing", async () => {
+    const { timingSafeTokenEqual } = await import("../auth.js");
+    expect(timingSafeTokenEqual("short", "much-longer-token")).toBe(false);
   });
 });
