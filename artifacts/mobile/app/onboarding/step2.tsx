@@ -19,7 +19,11 @@ export default function BackendSetupScreen() {
     setTestResult(null);
     const start = Date.now();
     try {
-      const res = await fetch(`${url.replace(/\/+$/, "")}/health`, { method: "GET", signal: AbortSignal.timeout(5000) });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const base = url.replace(/\/+$/, "");
+      const res = await fetch(`${base}/health`, { method: "GET", signal: controller.signal });
+      clearTimeout(timeoutId);
       const latency = Date.now() - start;
       if (res.ok) {
         setTestResult({ success: true, message: `Connected (${latency}ms)` });

@@ -44,12 +44,31 @@ function parseAnsi(text: string): AnsiSegment[] {
   return segments.length ? segments : [{ text, color: colors.primary }];
 }
 
+function sanitizeSessionId(id: string | null): string | null {
+  if (!id) return null;
+  const sanitized = id.replace(/[^a-zA-Z0-9_-]/g, '');
+  return sanitized.length > 0 ? sanitized : null;
+}
+
 const MAX_HISTORY = 100;
 const MAX_LINES = 5000;
 
+function sanitizeCommand(cmd: string): string {
+  if (!cmd || typeof cmd !== "string") return cmd;
+  cmd = cmd.replace(/\x1b\[[0-9;]*m/g, "");
+  cmd = cmd.trim();
+  if (cmd.length === 0) return cmd;
+  if (cmd.length > 128) throw new Error("Command too long");
+  if (cmd.includes("\x00")) throw new Error("Null byte not allowed");
+  const dangerousChars = /[<>&;'"|`]/;
+  if (dangerousChars.test(cmd)) throw new Error("Invalid command characters");
+  if (!/^[a-zA-Z0-9_\-./=@:\s]+$/.test(cmd)) throw new Error("Command contains invalid characters");
+  return cmd;
+}
+
 export default function SessionScreen() {
   const router = useRouter();
-  const { sessionId, prefill } = useLocalSearchParams<{ sessionId: string; prefill?: string }>();
+  const { sessionId: rawSessionId, prefill } = useLocalSearchParams<{ sessionId: string; prefill?: string }>();
   const [lines, setLines] = useState<string[]>([]);
   const [input, setInput] = useState("");
   const [connected, setConnected] = useState(false);
@@ -61,6 +80,8 @@ export default function SessionScreen() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttempts = useRef(0);
   const shouldReconnect = useRef(true);
+  
+  const sessionId = sanitizeSessionId(rawSessionId);
 
   useEffect(() => {
     AsyncStorage.getItem("terminal-font-size").then((v) => {
@@ -88,10 +109,10 @@ export default function SessionScreen() {
     const isHttps = DOMAIN_RAW.startsWith("https") || (Platform.OS === "web" && location.protocol === "https:");
     const protocol = isHttps ? "wss:" : "ws:";
     const url = `${protocol}//${DOMAIN}/api/ws/terminal/${sessionId}`;
-    // Token travels as a WS subprotocol (not a query param) so it doesn't
-    // land in access/proxy/edge logs.
+    // Token travels as URL parameter for better authentication and audit trail
     const token = (globalThis as any).EXPO_PUBLIC_API_TOKEN as string | undefined;
-    const ws = token ? new WebSocket(url, [token]) : new WebSocket(url);
+    const urlWithToken = token ? `${url}?token=${encodeURIComponent(token)}` : url;
+    const ws = new WebSocket(urlWithToken);
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -120,30 +141,47 @@ export default function SessionScreen() {
       }
     };
 
-    ws.onerror = () => {
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      setReconnectStatus("Connection error. Attempting to reconnect...");
       ws.close();
     };
   }, [sessionId]);
 
   useEffect(() => {
+    if (!sessionId) return;
     shouldReconnect.current = true;
     openWs();
     return () => {
       shouldReconnect.current = false;
       wsRef.current?.close();
+      wsRef.current = null;
     };
-  }, [openWs]);
+  }, [sessionId]);
 
   const sendInput = (text?: string) => {
     const cmd = text ?? input;
     if (!cmd || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-    wsRef.current.send(cmd + "\n");
-    setHistory((prev) => {
-      const next = [...prev, cmd];
-      return next.length > MAX_HISTORY ? next.slice(-MAX_HISTORY) : next;
-    });
-    setHistoryIndex(-1);
-    setInput("");
+    
+    if (cmd.length > 0 && cmd.length < 128 && cmd.trim().length > 0) {
+      try {
+        const sanitizedCmd = sanitizeCommand(cmd);
+        wsRef.current.send(sanitizedCmd + "\n");
+        setHistory((prev) => {
+          const next = [...prev, cmd];
+          return next.length > MAX_HISTORY ? next.slice(-MAX_HISTORY) : next;
+        });
+        setHistoryIndex(-1);
+        setInput("");
+      } catch (error) {
+        console.log("Command validation failed:", error);
+        setReconnectStatus("Error: Invalid command");
+      }
+    } else if (cmd.length >= 128) {
+      setReconnectStatus("Error: Command too long (max 128 characters)");
+    } else {
+      setReconnectStatus("Error: Empty command");
+    }
   };
 
   const historyUp = () => {

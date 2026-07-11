@@ -43,8 +43,24 @@ export default function ConnectionScreen() {
     setTestResult(null);
     try {
       const body: any = { host, port: Number(port), username };
-      if (authMode === "key") { body.privateKey = privateKey; body.passphrase = passphrase; }
-      else { body.password = password; }
+      if (authMode === "key") {
+        if (!privateKey || !privateKey.includes("-----BEGIN")) {
+          setTestResult({ success: false, message: "Invalid SSH private key - must include private key header" });
+          return;
+        }
+        if (privateKey.includes("passphrase") && !passphrase) {
+          setTestResult({ success: false, message: "Passphrase required for encrypted key" });
+          return;
+        }
+        body.privateKey = privateKey;
+        body.passphrase = passphrase || "";
+      } else { 
+        if (!password) {
+          setTestResult({ success: false, message: "Password is required for password authentication" });
+          return;
+        }
+        body.password = password;
+      }
       const data = await testConn.mutateAsync(body);
       setTestResult(data);
     } catch (err: any) {
@@ -54,10 +70,21 @@ export default function ConnectionScreen() {
 
   const handleSave = async () => {
     if (!host || !username || !name) return Alert.alert("Error", "Name, host and username are required");
+    if (authMode === "key" && !privateKey) {
+      return Alert.alert("Error", "SSH private key is required when using key authentication");
+    }
+    if (authMode === "key" && privateKey.includes("passphrase") && !passphrase) {
+      return Alert.alert("Error", "Passphrase is required when key is encrypted");
+    }
+    if (authMode === "password" && !password) {
+      return Alert.alert("Error", "Password is required when using password authentication");
+    }
     try {
       const body: any = { name, host, port: Number(port), username };
-      if (authMode === "key") { body.privateKey = privateKey; body.passphrase = passphrase; }
-      else { body.password = password; }
+      if (authMode === "key") { 
+        body.privateKey = privateKey; 
+        body.passphrase = passphrase || "";
+      } else { body.password = password; }
       const data = await createProfile.mutateAsync(body);
       await activateProfile.mutateAsync(data.id);
       setShowAddSheet(false);

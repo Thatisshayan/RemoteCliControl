@@ -38,6 +38,7 @@ export default function FilesScreen() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const { data, isLoading, refetch } = useListFiles(currentPath);
   const deleteFile = useDeleteFile();

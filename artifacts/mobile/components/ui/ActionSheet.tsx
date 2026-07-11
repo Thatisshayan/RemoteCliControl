@@ -29,7 +29,10 @@ export default function ActionSheet({ visible, title, message, items, onCancel }
             <TouchableOpacity
               key={i}
               style={styles.item}
-              onPress={() => { onCancel(); item.onPress(); }}
+              onPress={() => {
+                item.onPress();
+                onCancel();
+              }}
             >
               {item.icon && (
                 <Feather

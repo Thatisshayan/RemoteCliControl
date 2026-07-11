@@ -13,9 +13,17 @@ export async function getStoredApiToken(): Promise<string | null> {
   // One-time migration: an earlier build stored the token in AsyncStorage.
   const legacyValue = await AsyncStorage.getItem(KEY);
   if (legacyValue) {
-    await SecureStore.setItemAsync(KEY, legacyValue);
+    // Immediately remove legacy value to prevent exposure during migration
     await AsyncStorage.removeItem(KEY);
-    return legacyValue;
+    // Copy to secure storage with error handling
+    try {
+      await SecureStore.setItemAsync(KEY, legacyValue);
+      return legacyValue;
+    } catch (err) {
+      console.error("Failed to migrate token to secure store:", err);
+      // Do not return the legacy value if migration fails
+      return null;
+    }
   }
   return null;
 }

@@ -22,7 +22,10 @@ export default function SettingsScreen() {
   const fetchHealth = useCallback(async () => {
     try {
       const base = getBaseUrl();
-      const res = await fetch(`${base}/health`, { signal: AbortSignal.timeout(3000) });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch(`${base}/health`, { signal: controller.signal });
+      clearTimeout(timeoutId);
       if (res.ok) setHealth(await res.json());
     } catch (err: any) {
       console.warn("Failed to fetch health:", err?.message);
@@ -32,7 +35,10 @@ export default function SettingsScreen() {
   const fetchPushPreferences = useCallback(async () => {
     try {
       const base = getBaseUrl();
-      const res = await fetch(`${base}/api/push/preferences`, { signal: AbortSignal.timeout(3000) });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch(`${base}/api/push/preferences`, { signal: controller.signal });
+      clearTimeout(timeoutId);
       if (res.ok) setPushPerms(await res.json());
     } catch (err: any) {
       console.warn("Failed to fetch push preferences:", err?.message);
