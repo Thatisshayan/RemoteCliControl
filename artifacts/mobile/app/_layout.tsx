@@ -6,7 +6,6 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
 import * as SplashScreen from "expo-splash-screen";
-import { KeyboardProvider } from "react-native-keyboard-controller";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { setBaseUrl, setApiToken } from "@remotectrl/api-client-react";
@@ -70,9 +69,8 @@ function RootLayout() {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
-          <KeyboardProvider>
-            <ErrorBoundary>
-              <QueryClientProvider client={queryClient}>
+          <ErrorBoundary>
+            <QueryClientProvider client={queryClient}>
                 <Stack
                   screenOptions={{
                     headerShown: false,
@@ -87,9 +85,8 @@ function RootLayout() {
                 <StatusBar style="light" />
               </QueryClientProvider>
             </ErrorBoundary>
-          </KeyboardProvider>
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
+          </SafeAreaProvider>
+        </GestureHandlerRootView>
     );
   } catch (e: any) {
     debugLog("render_FAIL", { msg: e?.message, stack: e?.stack }, "H4");

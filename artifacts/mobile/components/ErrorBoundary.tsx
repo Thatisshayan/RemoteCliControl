@@ -2,7 +2,6 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
-import { Sentry } from "../lib/sentry";
 import { colors } from "../constants/colors";
 
 interface Props { children: React.ReactNode; }
@@ -16,7 +15,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    Sentry.captureException(error, { extra: { componentStack: info.componentStack } });
+    console.error("ErrorBoundary caught:", error, info.componentStack);
   }
 
   handleRetry = () => {
