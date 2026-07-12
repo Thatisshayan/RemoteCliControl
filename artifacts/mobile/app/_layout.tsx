@@ -14,6 +14,8 @@ import { colors } from "../constants/colors";
 import { debugLog, installGlobalErrorTrap } from "../lib/debug-logger";
 import { getStoredApiToken } from "../lib/secure-token";
 
+let __sideEffectsDone = false;
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
