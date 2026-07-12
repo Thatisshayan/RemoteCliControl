@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
@@ -41,9 +41,13 @@ export default function BackendSetupScreen() {
   const handleContinue = async () => {
     if (!connected) return;
     const baseUrl = url.replace(/\/+$/, "");
-    await AsyncStorage.setItem("server-url", baseUrl);
-    setBaseUrl(baseUrl);
-    router.push("/onboarding/step3");
+    try {
+      await AsyncStorage.setItem("server-url", baseUrl);
+      setBaseUrl(baseUrl);
+      router.push("/onboarding/step3");
+    } catch (err: any) {
+      Alert.alert("Error", "Failed to save server URL. Please try again.");
+    }
   };
 
   return (

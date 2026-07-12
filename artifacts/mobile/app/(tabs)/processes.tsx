@@ -18,13 +18,14 @@ function getCpuColor(cpu: number) {
 }
 
 export default function ProcessesScreen() {
-  const { data: processes, isLoading, refetch } = useGetProcesses();
+  const { data: processes, isLoading, refetch } = useGetProcesses({ refetchInterval: 10000 });
   const killProcess = useKillProcess();
   const [search, setSearch] = useState("");
   const [killTarget, setKillTarget] = useState<RemoteProcess | null>(null);
 
   const filtered = (processes || []).filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    String(p.pid).includes(search)
   );
 
   return (
@@ -92,7 +93,17 @@ export default function ProcessesScreen() {
         title="Kill Process"
         message={killTarget ? `Kill "${killTarget.name}" (PID ${killTarget.pid})?` : ""}
         items={[
-          { label: "Kill", destructive: true, onPress: async () => { if (killTarget) { try { await killProcess.mutateAsync(killTarget.pid); } catch (err: any) { Alert.alert("Error", err.message); } } setKillTarget(null); } },
+          { label: "Kill", destructive: true, onPress: async () => {
+            if (killTarget) {
+              const target = killTarget;
+              setKillTarget(null);
+              try {
+                await killProcess.mutateAsync(target.pid);
+              } catch (err: any) {
+                Alert.alert("Error", err.message);
+              }
+            }
+          }},
         ]}
         onCancel={() => setKillTarget(null)}
       />

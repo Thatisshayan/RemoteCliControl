@@ -103,20 +103,6 @@ export default function SettingsScreen() {
     await AsyncStorage.setItem("terminal-font-size", String(clamped));
   };
 
-  const handlePushPrefToggle = async (key: string, value: boolean) => {
-    try {
-      const base = getBaseUrl();
-      const res = await fetch(`${base}/api/push/preferences`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [key]: value }),
-      });
-      if (res.ok) setPushPerms(await res.json());
-    } catch (err: any) {
-      console.warn("Failed to update push preference:", err?.message);
-    }
-  };
-
   const handlePushPreferenceToggle = async (key: "sessionDisconnected" | "serverHealthChange", val: boolean) => {
     setPushPerms((prev) => prev ? { ...prev, [key]: val } : { sessionDisconnected: true, serverHealthChange: true });
     try {

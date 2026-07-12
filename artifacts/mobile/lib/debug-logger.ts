@@ -10,7 +10,7 @@ const RIG_HOST_CANDIDATES = [
   'localhost',
 ];
 const getDebugBaseUrl = () => {
-  const e = (typeof process !== 'undefined' && process?.env) || {};
+  const e: Record<string, string | undefined> = (typeof process !== 'undefined' && process?.env) || {};
   const fromEnv = e.EXPO_DEV_LOG_HOST || e.RIG_IP;
   if (fromEnv) return `http://${fromEnv}:8787/log`;
   return `http://${RIG_HOST_CANDIDATES[0]}:8787/log`;
@@ -31,7 +31,7 @@ function postLog(msg: string, data: unknown, hypothesisId: string | null, extra:
       loc: (new Error().stack || '').split('\n').slice(2, 4).join(' | '),
       ts: new Date().toISOString(),
     });
-    if (typeof global !== 'undefined' && global.fetch) {
+    if (typeof global !== 'undefined' && typeof global.fetch === 'function') {
       // Try primary URL. If the bundle was built with a stale IP, also try fallbacks.
       const candidates = [
         DEBUG_LOG_URL,
@@ -52,13 +52,18 @@ export const debugLog = (msg: string, data: unknown, hypothesisId: string | null
   postLog(msg, data, hypothesisId, null);
 };
 
+interface ErrorUtilsType {
+  setGlobalHandler: (handler: (e: Error, isFatal: boolean) => void) => void;
+  getGlobalHandler: () => ((e: Error, isFatal: boolean) => void) | undefined;
+}
+
 export function installGlobalErrorTrap() {
   if (typeof __DEV__ !== 'undefined' && !__DEV__) return;
   // Capture JS errors before React tree mounts
-  const ErrorUtils = global.ErrorUtils;
+  const ErrorUtils = (global as any).ErrorUtils as ErrorUtilsType | undefined;
   if (ErrorUtils && typeof ErrorUtils.setGlobalHandler === 'function') {
-    const prev = ErrorUtils.getGlobalHandler && ErrorUtils.getGlobalHandler();
-    ErrorUtils.setGlobalHandler((e, isFatal) => {
+    const prev = ErrorUtils.getGlobalHandler?.();
+    ErrorUtils.setGlobalHandler((e: Error, isFatal: boolean) => {
       postLog('GLOBAL_JS_ERROR', { name: e?.name, message: e?.message, stack: e?.stack }, 'GLOBAL', { isFatal: !!isFatal });
       if (typeof prev === 'function') prev(e, isFatal);
     });
@@ -66,7 +71,7 @@ export function installGlobalErrorTrap() {
 
   // Capture unhandled promise rejections - works on Hermes
   if (typeof global.addEventListener === 'function') {
-    global.addEventListener('unhandledrejection', (e) => {
+    global.addEventListener('unhandledrejection', (e: any) => {
       const reason = e && (e.reason || e);
       postLog('UNHANDLED_REJECTION', { message: reason?.message, stack: reason?.stack }, 'GLOBAL', { kind: typeof reason });
     });

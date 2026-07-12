@@ -19,7 +19,7 @@ const STATUS_VARIANT: Record<string, "connected" | "connecting" | "error" | "dis
 
 export default function TerminalScreen() {
   const router = useRouter();
-  const { data: sessions, isLoading } = useGetSessions();
+  const { data: sessions, isLoading, refetch } = useGetSessions({ refetchInterval: 5000 });
   const createSession = useCreateSession();
   const closeSession = useCloseSession();
   const renameSession = useRenameSession();
@@ -29,7 +29,8 @@ export default function TerminalScreen() {
   const handleNewSession = async () => {
     try {
       const session = await createSession.mutateAsync();
-      router.push(`/session/${session.id}`);
+      const safeId = session.id.replace(/[^a-zA-Z0-9_-]/g, "");
+      if (safeId) router.push(`/session/${safeId}`);
     } catch (err: any) {
       Alert.alert("Error", err.message);
     }
@@ -78,7 +79,10 @@ export default function TerminalScreen() {
           keyExtractor={(s) => s.id}
           renderItem={({ item }) => (
             <TouchableOpacity
-              onPress={() => router.push(`/session/${item.id}`)}
+              onPress={() => {
+                const safeId = item.id.replace(/[^a-zA-Z0-9_-]/g, "");
+                if (safeId) router.push(`/session/${safeId}`);
+              }}
               onLongPress={() => handleRename(item)}
             >
               <Card style={styles.card}>

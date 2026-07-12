@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { UseQueryOptions, UseMutationOptions } from "@tanstack/react-query";
+import type { UseMutationOptions } from "@tanstack/react-query";
 import { api, getBaseUrl } from "./client";
 import type {
   ConnectionConfig,
@@ -75,7 +75,7 @@ export const useActivateConnection = () => {
 };
 
 // Session hooks
-export const useGetSessions = (options?: UseQueryOptions<Session[]>) =>
+export const useGetSessions = (options?: { refetchInterval?: number }) =>
   useQuery({ queryKey: keys.sessions, queryFn: () => api.get<Session[]>("/sessions"), ...options });
 
 export const useCreateSession = () => {
@@ -144,8 +144,8 @@ export const useDownloadFile = () =>
   });
 
 // Process hooks
-export const useGetProcesses = () =>
-  useQuery({ queryKey: keys.processes, queryFn: () => api.get<RemoteProcess[]>("/processes") });
+export const useGetProcesses = (options?: { refetchInterval?: number }) =>
+  useQuery({ queryKey: keys.processes, queryFn: () => api.get<RemoteProcess[]>("/processes"), ...options });
 
 export const useKillProcess = () => {
   const qc = useQueryClient();

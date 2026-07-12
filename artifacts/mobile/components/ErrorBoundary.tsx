@@ -31,8 +31,8 @@ export default class ErrorBoundary extends React.Component<Props, State> {
     try {
       await AsyncStorage.removeItem("server-url");
       await SecureStore.deleteItemAsync("api-token");
-    } catch {
-      // best effort
+    } catch (err) {
+      console.warn("Failed to clear connection settings:", err);
     }
     this.setState({ hasError: false, error: null });
   };

@@ -52,6 +52,7 @@ function sanitizeSessionId(id: string | null): string | null {
 
 const MAX_HISTORY = 100;
 const MAX_LINES = 5000;
+const CONTROL_CHARS = new Set(["\t", "\x03", "\x04", "\x0d", "\x7f"]);
 
 function sanitizeCommand(cmd: string): string {
   if (!cmd || typeof cmd !== "string") return cmd;
@@ -60,9 +61,10 @@ function sanitizeCommand(cmd: string): string {
   if (cmd.length === 0) return cmd;
   if (cmd.length > 128) throw new Error("Command too long");
   if (cmd.includes("\x00")) throw new Error("Null byte not allowed");
+  if (CONTROL_CHARS.has(cmd)) return cmd;
   const dangerousChars = /[<>&;'"|`]/;
   if (dangerousChars.test(cmd)) throw new Error("Invalid command characters");
-  if (!/^[a-zA-Z0-9_\-./=@:\s]+$/.test(cmd)) throw new Error("Command contains invalid characters");
+  if (!/^[a-zA-Z0-9_\-./=@:\s\\]+$/.test(cmd)) throw new Error("Command contains invalid characters");
   return cmd;
 }
 
@@ -80,7 +82,9 @@ export default function SessionScreen() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttempts = useRef(0);
   const shouldReconnect = useRef(true);
-  
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isReconnecting = useRef(false);
+
   const sessionId = sanitizeSessionId(rawSessionId);
 
   useEffect(() => {
@@ -94,8 +98,15 @@ export default function SessionScreen() {
   }, [fontSize]);
 
   useEffect(() => {
-    KeepAwake.activateKeepAwakeAsync();
-    return () => { (KeepAwake as any).deactivateKeepAwake?.().catch(() => {}); };
+    let mounted = true;
+    KeepAwake.activateKeepAwakeAsync().catch(() => {});
+    return () => {
+      if (!mounted) return;
+      try {
+        const fn = (KeepAwake as any).deactivateKeepAwake;
+        if (typeof fn === "function") fn().catch(() => {});
+      } catch (_) {}
+    };
   }, []);
 
   useEffect(() => {
@@ -105,17 +116,35 @@ export default function SessionScreen() {
   }, [prefill]);
 
   const openWs = useCallback(() => {
-    if (!sessionId) return;
-    const isHttps = DOMAIN_RAW.startsWith("https") || (Platform.OS === "web" && location.protocol === "https:");
+    if (!sessionId || isReconnecting.current) return;
+    isReconnecting.current = true;
+
+    const isHttps = DOMAIN_RAW.startsWith("https");
     const protocol = isHttps ? "wss:" : "ws:";
     const url = `${protocol}//${DOMAIN}/api/ws/terminal/${sessionId}`;
-    // Token travels as URL parameter for better authentication and audit trail
     const token = (globalThis as any).EXPO_PUBLIC_API_TOKEN as string | undefined;
     const urlWithToken = token ? `${url}?token=${encodeURIComponent(token)}` : url;
-    const ws = new WebSocket(urlWithToken);
+
+    let ws: WebSocket;
+    try {
+      ws = new WebSocket(urlWithToken);
+    } catch (err) {
+      isReconnecting.current = false;
+      setReconnectStatus("Failed to create WebSocket connection");
+      return;
+    }
     wsRef.current = ws;
 
+    const cleanupReconnectTimer = () => {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+    };
+
     ws.onopen = () => {
+      isReconnecting.current = false;
+      cleanupReconnectTimer();
       setConnected(true);
       reconnectAttempts.current = 0;
       setReconnectStatus("");
@@ -130,12 +159,14 @@ export default function SessionScreen() {
     };
 
     ws.onclose = () => {
+      isReconnecting.current = false;
       setConnected(false);
       if (shouldReconnect.current && reconnectAttempts.current < 10) {
         reconnectAttempts.current++;
         const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
         setReconnectStatus(`Reconnecting (${reconnectAttempts.current}/10)...`);
-        setTimeout(openWs, delay);
+        cleanupReconnectTimer();
+        reconnectTimerRef.current = setTimeout(openWs, delay);
       } else {
         setReconnectStatus("Disconnected");
       }
@@ -144,6 +175,7 @@ export default function SessionScreen() {
     ws.onerror = (error) => {
       console.error("WebSocket error:", error);
       setReconnectStatus("Connection error. Attempting to reconnect...");
+      isReconnecting.current = false;
       ws.close();
     };
   }, [sessionId]);
@@ -151,36 +183,39 @@ export default function SessionScreen() {
   useEffect(() => {
     if (!sessionId) return;
     shouldReconnect.current = true;
+    reconnectAttempts.current = 0;
+    isReconnecting.current = false;
     openWs();
     return () => {
       shouldReconnect.current = false;
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       wsRef.current?.close();
       wsRef.current = null;
+      isReconnecting.current = false;
     };
   }, [sessionId]);
 
   const sendInput = (text?: string) => {
     const cmd = text ?? input;
     if (!cmd || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-    
-    if (cmd.length > 0 && cmd.length < 128 && cmd.trim().length > 0) {
-      try {
-        const sanitizedCmd = sanitizeCommand(cmd);
-        wsRef.current.send(sanitizedCmd + "\n");
+
+    try {
+      const sanitizedCmd = sanitizeCommand(cmd);
+      wsRef.current.send(sanitizedCmd + "\n");
+      if (text === undefined) {
         setHistory((prev) => {
           const next = [...prev, cmd];
           return next.length > MAX_HISTORY ? next.slice(-MAX_HISTORY) : next;
         });
         setHistoryIndex(-1);
         setInput("");
-      } catch (error) {
-        console.log("Command validation failed:", error);
-        setReconnectStatus("Error: Invalid command");
       }
-    } else if (cmd.length >= 128) {
-      setReconnectStatus("Error: Command too long (max 128 characters)");
-    } else {
-      setReconnectStatus("Error: Empty command");
+    } catch (error: any) {
+      console.log("Command validation failed:", error?.message);
+      setReconnectStatus(`Error: ${error?.message || "Invalid command"}`);
     }
   };
 

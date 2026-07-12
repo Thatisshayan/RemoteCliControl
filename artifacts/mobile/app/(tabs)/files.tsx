@@ -16,6 +16,14 @@ const DOMAIN_RAW = process.env.EXPO_PUBLIC_DOMAIN || "http://localhost:3000";
 const BASE_URL = DOMAIN_RAW.startsWith("http") ? DOMAIN_RAW : `http://${DOMAIN_RAW}`;
 
 const BINARY_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".mp4", ".zip", ".exe", ".pdf", ".bin", ".dll", ".so", ".dmg", ".iso"]);
+const MAX_PREVIEW_SIZE = 100 * 1024; // 100KB limit for preview
+
+function getAuthHeaders(): Record<string, string> {
+  const token = (globalThis as any).EXPO_PUBLIC_API_TOKEN as string | undefined;
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}
 
 function isBinary(name: string): boolean {
   const ext = name.toLowerCase().slice(name.lastIndexOf("."));
@@ -81,6 +89,10 @@ export default function FilesScreen() {
       Alert.alert("Binary File", "Binary file — download to view");
       return;
     }
+    if (item.size && item.size > MAX_PREVIEW_SIZE) {
+      Alert.alert("File Too Large", `Preview limited to ${MAX_PREVIEW_SIZE / 1024}KB. File is ${formatSize(item.size)}.`);
+      return;
+    }
     setPreviewLoading(true);
     setPreviewName(item.name);
     try {
@@ -99,7 +111,8 @@ export default function FilesScreen() {
     try {
       const url = `${BASE_URL}/api/files/download?path=${encodeURIComponent(item.path)}`;
       const localUri = FileSystem.documentDirectory + item.name;
-      await FileSystem.downloadAsync(url, localUri);
+      const headers = getAuthHeaders();
+      await FileSystem.downloadAsync(url, localUri, { headers });
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(localUri);
       } else {
@@ -121,8 +134,10 @@ export default function FilesScreen() {
       const remotePath = currentPath.endsWith("/") ? currentPath + filename : currentPath + "/" + filename;
       const formData = new FormData();
       formData.append("file", { uri: asset.uri, name: filename, type: asset.mimeType || "application/octet-stream" } as any);
+      const headers = getAuthHeaders();
       const res = await fetch(`${BASE_URL}/api/files/upload?path=${encodeURIComponent(remotePath)}`, {
         method: "POST",
+        headers,
         body: formData,
       });
       if (!res.ok) {
