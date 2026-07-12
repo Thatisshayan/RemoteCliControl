@@ -13,26 +13,6 @@ import { setBaseUrl, setApiToken } from "@remotectrl/api-client-react";
 import { colors } from "../constants/colors";
 import { debugLog, installGlobalErrorTrap } from "../lib/debug-logger";
 import { getStoredApiToken } from "../lib/secure-token";
-import { initSentry, Sentry } from "../lib/sentry";
-
-initSentry();
-
-// #region debug
-let __sideEffectsDone = false;
-try {
-  debugLog("layout_module_loaded", { ts: Date.now() }, "BOOT");
-  installGlobalErrorTrap();
-} catch (_) { /* noop */ }
-// #endregion
-
-const domain = process.env.EXPO_PUBLIC_DOMAIN || "http://localhost:3000";
-const baseUrl = domain.startsWith("http") ? domain : `http://${domain}`;
-debugLog("init_setBaseUrl_sync", { baseUrl, env: process.env.EXPO_PUBLIC_DOMAIN }, "H5");
-setBaseUrl(baseUrl);
-if (process.env.EXPO_PUBLIC_API_TOKEN) {
-  debugLog("init_setApiToken", { hasToken: true }, "H5");
-  setApiToken(process.env.EXPO_PUBLIC_API_TOKEN);
-}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -68,7 +48,7 @@ async function bootstrapBackground() {
   debugLog("bootstrap_deferred_done", {}, "BOOT");
 }
 
-export default Sentry.wrap(RootLayout);
+export default RootLayout;
 
 function RootLayout() {
   debugLog("function_render_first_time_unconditional", {}, "BOOT");
