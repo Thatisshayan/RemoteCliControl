@@ -19,7 +19,21 @@
       "buildNumber": "6",
       "infoPlist": {
         "NSFaceIDUsageDescription": "RemoteCTRL uses Face ID to lock the app and protect your server credentials.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSExceptionDomains": {
+            "sentry.io": {
+              "NSExceptionAllowsInsecureHTTPLoads": false,
+              "NSExceptionRequiresForwardSecrecy": true,
+              "NSIncludesSubdomains": true
+            },
+            "trycloudflare.com": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSIncludesSubdomains": true
+            }
+          }
+        }
       }
     },
     "android": {
@@ -42,8 +56,7 @@
       "expo-font",
       "expo-local-authentication",
       "expo-secure-store",
-      "expo-dev-client",
-      "@sentry/react-native/expo"
+      "expo-dev-client"
     ],
     "extra": {
       "router": {
