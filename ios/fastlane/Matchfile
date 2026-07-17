@@ -1,0 +1,5 @@
+git_url("https://github.com/Thatisshayan/RemoteCliControl.git")
+git_branch("ios-certs")
+storage_mode("git")
+type("appstore")
+app_identifier(["com.remotectrl.app"])
