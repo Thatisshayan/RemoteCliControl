@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { registerPushDevice, removePushDevice, getPushDevices, getNotificationPreferences, updateNotificationPreferences } from "../lib/store.js";
-import logger from "../lib/logger.js";
 import { PushPreferenceUpdateSchema } from "../lib/contracts.js";
 import { parseBody, sendError } from "../lib/http.js";
 
@@ -16,10 +15,10 @@ router.post("/push/register", (req, res) => {
   }
   try {
     const device = registerPushDevice(pushToken, platform, deviceName);
-    logger.info({ deviceId: device.id }, "Push device registered");
+    req.log.info({ deviceId: device.id }, "Push device registered");
     res.json({ success: true, deviceId: device.id });
   } catch (err: any) {
-    logger.error({ err }, "Failed to register push device");
+    req.log.error({ err }, "Failed to register push device");
     sendError(res, 500, "PUSH_REGISTER_FAILED", "Failed to register push device");
   }
 });

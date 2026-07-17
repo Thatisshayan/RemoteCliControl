@@ -158,8 +158,16 @@ separate (`{ stdout, stderr, exitCode }`) rather than merging them, so
 `GET /api/processes`'s `ConvertTo-Json` parsing can't be broken by unrelated
 warnings on stderr, and `DELETE /api/processes/:pid` checks the exit code
 instead of always reporting success. See
-`artifacts/api-server/src/routes/__tests__/processes.test.ts`. As of this
-pass: 14 test files, 106 tests, all passing.
+`artifacts/api-server/src/routes/__tests__/processes.test.ts`.
+
+Every request gets a stable id: `app.ts` reuses an incoming `x-request-id`
+header or mints a UUID, echoes it back as a response header, and every log
+line for that request — including the global unhandled-error handler and
+manual logs in `files.ts`/`processes.ts`/`push.ts` — goes through `req.log`
+(a pino child logger bound with that id) instead of the bare logger. See
+`artifacts/api-server/src/__tests__/request-id.test.ts`.
+
+As of this pass: 15 test files, 109 tests, all passing.
 
 The mobile app has its own Jest suite (`pnpm --filter @remotectrl/mobile test`,
 included in `pnpm test` and CI's `test-mobile` job) using `jest-expo` and

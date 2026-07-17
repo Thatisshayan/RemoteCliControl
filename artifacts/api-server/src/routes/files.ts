@@ -4,7 +4,6 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { getSftp } from "../lib/sshManager.js";
-import logger from "../lib/logger.js";
 import { FilePathInputSchema, FileRenameInputSchema } from "../lib/contracts.js";
 import { parseBody, parseQuery, sendError } from "../lib/http.js";
 import { z } from "zod";
@@ -98,7 +97,7 @@ router.get("/files", async (req: Request, res: Response, next: NextFunction) => 
             permissions: attrs.mode?.toString(8) || "",
           };
         } catch (err: any) {
-          logger.debug({ err, path: fullPath }, "Failed to stat file, using defaults");
+          req.log.debug({ err, path: fullPath }, "Failed to stat file, using defaults");
           return { name: item.filename, path: fullPath, type: "file" as const, size: 0, modifiedAt: "", permissions: "" };
         }
       })

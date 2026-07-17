@@ -1,11 +1,10 @@
 import { Router } from "express";
 import { execCommand } from "../lib/sshManager.js";
-import logger from "../lib/logger.js";
 import { z } from "zod";
 import { parseParams, sendError } from "../lib/http.js";
 const router = Router();
 
-router.get("/processes", async (_req, res, next) => {
+router.get("/processes", async (req, res, next) => {
   try {
     const cmd =
       'powershell.exe -NoProfile -Command "Get-Process | Select-Object -Property Name,Id,CPU,WorkingSet,Responding | ConvertTo-Json -Compress"';
@@ -13,7 +12,7 @@ router.get("/processes", async (_req, res, next) => {
     if (stderr.trim()) {
       // Non-fatal (e.g. access-denied on a handful of protected processes) —
       // Get-Process still returns the rest on stdout, which is what we parse.
-      logger.warn({ stderr: stderr.trim() }, "Get-Process reported warnings on stderr");
+      req.log.warn({ stderr: stderr.trim() }, "Get-Process reported warnings on stderr");
     }
     const raw = stdout.trim();
     if (!raw) return res.json([]);

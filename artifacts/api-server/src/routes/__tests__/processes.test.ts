@@ -1,4 +1,5 @@
 import express from "express";
+import pinoHttp from "pino-http";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,10 +10,15 @@ vi.mock("../../lib/sshManager.js", () => ({
 import router from "../processes.js";
 import { execCommand } from "../../lib/sshManager.js";
 import { HttpError, sendError } from "../../lib/http.js";
+import logger from "../../lib/logger.js";
 
 describe("processes routes", () => {
   const app = express();
   app.use(express.json());
+  // processes.ts logs via req.log (see sshManager stderr/warn handling) —
+  // needs the real pino-http middleware mounted, same as app.ts, or req.log
+  // is undefined and every request 500s.
+  app.use(pinoHttp({ logger }));
   app.use(router);
   // Mirrors app.ts's error-handling middleware — without it, a thrown
   // HttpError (e.g. from parseParams) falls through to Express's default
