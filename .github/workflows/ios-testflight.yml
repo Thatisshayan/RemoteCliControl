@@ -41,7 +41,7 @@ jobs:
 
       - name: Move generated ios project into place
         run: |
-          rsync -a --delete artifacts/mobile/ios/ ios/
+          rsync -a artifacts/mobile/ios/ ios/
           rm -rf artifacts/mobile/ios
 
       - uses: ruby/setup-ruby@v1
