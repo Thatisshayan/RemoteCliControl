@@ -50,6 +50,13 @@ jobs:
           bundler-cache: true
           working-directory: ios
 
+      - name: Derive match git auth from the workflow token
+        id: match_auth
+        run: |
+          AUTH=$(printf 'x-access-token:%s' "${{ secrets.GITHUB_TOKEN }}" | base64)
+          echo "::add-mask::$AUTH"
+          echo "auth=$AUTH" >> "$GITHUB_OUTPUT"
+
       - name: Run fastlane
         working-directory: ios
         env:
@@ -57,4 +64,5 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ steps.match_auth.outputs.auth }}
         run: bundle exec fastlane ${{ github.event.inputs.lane || 'beta' }}
