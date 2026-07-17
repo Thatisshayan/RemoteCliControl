@@ -23,6 +23,82 @@ It exists to keep future work tied to the current truth of the repository rather
 - CI was repaired after lockfile refresh and the standalone EAS workflow was gated away from every `main` push.
 - Future work should preserve the current contract-first and docs-in-sync operating model.
 
+## Founder / Operator View
+
+In plain terms, this roadmap is ordered to protect the business in the right sequence.
+
+### Now
+
+`Now` is about making the product harder to break.
+
+What these items do in basic English:
+
+- prove the main app flow actually works from start to finish
+- stop API/docs/type drift from creeping back in
+- make CI catch contract mistakes automatically
+- prove the mobile app really uses the saved server URL and token correctly
+- prove terminal auth still works the right way
+- prove the Windows script layer works in CI, not only on one machine
+- let a user test whether their server URL and token are valid before they hit broken screens
+- recover cleanly when auth expires instead of leaving the app in a confusing state
+- make process handling less fragile
+- make logs easier to use when something goes wrong
+
+Why it matters to a founder/operator:
+
+- fewer silent regressions
+- less time wasted debugging basic failures
+- more confidence that demos, internal testing, and real usage will behave the same way
+- lower risk before spending time on distribution
+
+### Next
+
+`Next` is about making the product easier to operate, support, and trust day to day.
+
+What these items do in basic English:
+
+- explain version mismatches
+- clearly show when the server is offline or unreachable
+- let users retry failed actions without restarting everything
+- reconnect better after backend restarts
+- add more guardrails around risky or fragile API paths
+- reduce accidental destructive actions
+- record important backend changes for later review
+- make startup behavior easier to understand
+- expose useful diagnostics inside the app
+- reduce duplicated mobile data-fetch logic
+
+Why it matters to a founder/operator:
+
+- less support friction
+- faster troubleshooting
+- a more trustworthy product feel
+- cleaner internal operations as usage grows
+
+### Later
+
+`Later` is about polish, stronger security, and deferred capabilities once the base is dependable.
+
+What these items do in basic English:
+
+- bring push back safely
+- make biometric locking real instead of just a saved preference
+- improve file browsing and large-folder handling
+- make switching between servers easier
+- capture more debug data for terminal problems
+- improve file-preview behavior
+- protect the server from noisy usage
+- make local app setup easier to move or back up
+- expand release and recovery process docs
+- revisit the iOS distribution path once the repo is more mature
+
+Why it matters to a founder/operator:
+
+- better product polish
+- stronger security posture
+- easier scaling and support later
+- less risk of polishing the wrong layer too early
+
 ## Now
 
 These are the highest-return tasks before any renewed Expo/TestFlight push.
