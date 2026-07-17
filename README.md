@@ -197,8 +197,11 @@ included in `pnpm test` and CI's `test-mobile` job) using `jest-expo` and
 - `lib/__tests__/version-compat.test.ts` — `compareVersions`/
   `getVersionCompatibility` (`lib/version-compat.ts`), the lenient
   dotted-version comparison behind Settings' version-compatibility banner.
+- `lib/__tests__/error-message.test.ts` — `getErrorMessage`/
+  `isServerUnreachable` (`lib/error-message.ts`), which every screen now
+  uses instead of showing a raw caught error's `.message` directly.
 
-As of this pass: 5 test files, 48 tests, all passing.
+As of this pass: 6 test files, 59 tests, all passing.
 
 CI's `windows-workspace` job runs `pnpm typecheck`, `pnpm test`, and
 `pnpm build:server` on `windows-latest` on every push/PR — not just on

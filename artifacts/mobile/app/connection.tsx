@@ -15,6 +15,7 @@ import Badge from "../components/ui/Badge";
 import EmptyState from "../components/ui/EmptyState";
 import ActionSheet from "../components/ui/ActionSheet";
 import { colors } from "../constants/colors";
+import { getErrorMessage } from "../lib/error-message";
 import type { ConnectionProfile } from "@remotectrl/api-zod";
 
 export default function ConnectionScreen() {
@@ -64,7 +65,7 @@ export default function ConnectionScreen() {
       const data = await testConn.mutateAsync(body);
       setTestResult(data);
     } catch (err: any) {
-      setTestResult({ success: false, message: err.message });
+      setTestResult({ success: false, message: getErrorMessage(err) });
     }
   };
 
@@ -90,7 +91,7 @@ export default function ConnectionScreen() {
       setShowAddSheet(false);
       resetForm();
     } catch (err: any) {
-      Alert.alert("Error", err.message);
+      Alert.alert("Error", getErrorMessage(err));
     }
   };
 
@@ -110,7 +111,7 @@ export default function ConnectionScreen() {
     try {
       await activateProfile.mutateAsync(id);
     } catch (err: any) {
-      Alert.alert("Error", err.message);
+      Alert.alert("Error", getErrorMessage(err));
     }
   };
 
@@ -167,7 +168,7 @@ export default function ConnectionScreen() {
         title="Delete Profile"
         message={deleteTarget ? `Remove "${deleteTarget.name}"?` : ""}
         items={[
-          { label: "Delete", destructive: true, onPress: async () => { if (deleteTarget) { try { await deleteProfile.mutateAsync(deleteTarget.id); } catch (err: any) { Alert.alert("Error", err.message); } } setDeleteTarget(null); } },
+          { label: "Delete", destructive: true, onPress: async () => { if (deleteTarget) { try { await deleteProfile.mutateAsync(deleteTarget.id); } catch (err: any) { Alert.alert("Error", getErrorMessage(err)); } } setDeleteTarget(null); } },
         ]}
         onCancel={() => setDeleteTarget(null)}
       />

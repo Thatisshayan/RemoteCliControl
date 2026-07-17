@@ -10,6 +10,7 @@ import EmptyState from "../../components/ui/EmptyState";
 import LoadingState from "../../components/ui/LoadingState";
 import ActionSheet from "../../components/ui/ActionSheet";
 import { colors } from "../../constants/colors";
+import { getErrorMessage } from "../../lib/error-message";
 import type { FileItem } from "@remotectrl/api-zod";
 
 const BINARY_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".mp4", ".zip", ".exe", ".pdf", ".bin", ".dll", ".so", ".dmg", ".iso"]);
@@ -70,7 +71,7 @@ export default function FilesScreen() {
       await deleteFile.mutateAsync(item.path);
       refetch();
     } catch (err: any) {
-      Alert.alert("Error", err.message);
+      Alert.alert("Error", getErrorMessage(err));
     }
   };
 
@@ -90,7 +91,7 @@ export default function FilesScreen() {
       const result = await readFile.mutateAsync(item.path);
       setPreviewContent(result.content);
     } catch (err: any) {
-      setPreviewContent(`Error: ${err.message}`);
+      setPreviewContent(`Error: ${getErrorMessage(err)}`);
     } finally {
       setPreviewLoading(false);
     }
@@ -110,7 +111,7 @@ export default function FilesScreen() {
         Alert.alert("Downloaded", `Saved to ${localUri}`);
       }
     } catch (err: any) {
-      Alert.alert("Error", err.message);
+      Alert.alert("Error", getErrorMessage(err));
     } finally {
       setDownloading(false);
     }
@@ -136,7 +137,7 @@ export default function FilesScreen() {
       }
       refetch();
     } catch (err: any) {
-      Alert.alert("Upload Error", err.message);
+      Alert.alert("Upload Error", getErrorMessage(err));
     }
   };
 
@@ -151,7 +152,7 @@ export default function FilesScreen() {
       setShowMkdir(false);
       refetch();
     } catch (err: any) {
-      Alert.alert("Error", err.message);
+      Alert.alert("Error", getErrorMessage(err));
     }
   };
 

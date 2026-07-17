@@ -9,6 +9,7 @@ import EmptyState from "../../components/ui/EmptyState";
 import LoadingState from "../../components/ui/LoadingState";
 import ActionSheet from "../../components/ui/ActionSheet";
 import { colors } from "../../constants/colors";
+import { getErrorMessage } from "../../lib/error-message";
 import type { RemoteProcess } from "@remotectrl/api-zod";
 
 function getCpuColor(cpu: number) {
@@ -100,7 +101,7 @@ export default function ProcessesScreen() {
               try {
                 await killProcess.mutateAsync(target.pid);
               } catch (err: any) {
-                Alert.alert("Error", err.message);
+                Alert.alert("Error", getErrorMessage(err));
               }
             }
           }},

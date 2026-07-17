@@ -8,6 +8,7 @@ import Badge from "../../components/ui/Badge";
 import EmptyState from "../../components/ui/EmptyState";
 import LoadingState from "../../components/ui/LoadingState";
 import { colors } from "../../constants/colors";
+import { getErrorMessage } from "../../lib/error-message";
 import type { Session } from "@remotectrl/api-zod";
 
 const STATUS_VARIANT: Record<string, "connected" | "connecting" | "error" | "disconnected"> = {
@@ -32,7 +33,7 @@ export default function TerminalScreen() {
       const safeId = session.id.replace(/[^a-zA-Z0-9_-]/g, "");
       if (safeId) router.push(`/session/${safeId}`);
     } catch (err: any) {
-      Alert.alert("Error", err.message);
+      Alert.alert("Error", getErrorMessage(err));
     }
   };
 
@@ -49,7 +50,7 @@ export default function TerminalScreen() {
     try {
       await renameSession.mutateAsync({ id: renamingId, title: renameText.trim() });
     } catch (err: any) {
-      Alert.alert("Error", err.message);
+      Alert.alert("Error", getErrorMessage(err));
     }
     setRenamingId(null);
   };
@@ -58,7 +59,7 @@ export default function TerminalScreen() {
     try {
       await closeSession.mutateAsync(id);
     } catch (err: any) {
-      Alert.alert("Error", err.message);
+      Alert.alert("Error", getErrorMessage(err));
     }
   };
 

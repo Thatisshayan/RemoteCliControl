@@ -9,6 +9,7 @@ import Badge from "../../components/ui/Badge";
 import EmptyState from "../../components/ui/EmptyState";
 import ActionSheet from "../../components/ui/ActionSheet";
 import { colors } from "../../constants/colors";
+import { getErrorMessage } from "../../lib/error-message";
 import type { SavedCommand, Session } from "@remotectrl/api-zod";
 
 export default function CommandsScreen() {
@@ -41,7 +42,7 @@ export default function CommandsScreen() {
     try {
       await deleteCommand.mutateAsync(cmd.id);
     } catch (err: any) {
-      Alert.alert("Error", err.message);
+      Alert.alert("Error", getErrorMessage(err));
     }
   };
 
@@ -54,7 +55,7 @@ export default function CommandsScreen() {
       setCommand("");
       setDescription("");
     } catch (err: any) {
-      Alert.alert("Error", err.message);
+      Alert.alert("Error", getErrorMessage(err));
     }
   };
 
