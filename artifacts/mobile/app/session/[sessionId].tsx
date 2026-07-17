@@ -47,6 +47,12 @@ function parseAnsi(text: string): AnsiSegment[] {
 const MAX_HISTORY = 100;
 const MAX_LINES = 5000;
 const CONTROL_CHARS = new Set(["\t", "\x03", "\x04", "\x0d", "\x7f"]);
+// wsHandler.ts closes with this code when the session id it was given
+// doesn't exist server-side -- the normal outcome of a backend restart,
+// since sessions live only in server memory. Retrying the same dead
+// session id in a loop would never succeed; this needs a distinct
+// "session lost" UX instead of the generic transient-disconnect retry.
+const SESSION_NOT_FOUND_CODE = 4004;
 
 function sanitizeCommand(cmd: string): string {
   if (!cmd || typeof cmd !== "string") return cmd;
@@ -70,6 +76,7 @@ export default function SessionScreen() {
   const [input, setInput] = useState("");
   const [connected, setConnected] = useState(false);
   const [reconnectStatus, setReconnectStatus] = useState("");
+  const [sessionLost, setSessionLost] = useState(false);
   const [fontSize, setFontSize] = useState(12);
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -138,6 +145,7 @@ export default function SessionScreen() {
       isReconnecting.current = false;
       cleanupReconnectTimer();
       setConnected(true);
+      setSessionLost(false);
       reconnectAttempts.current = 0;
       setReconnectStatus("");
     };
@@ -150,9 +158,20 @@ export default function SessionScreen() {
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 50);
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
       isReconnecting.current = false;
       setConnected(false);
+      if (event.code === SESSION_NOT_FOUND_CODE) {
+        // The server no longer has this session (most commonly: it
+        // restarted, and in-memory session state is gone). Retrying the
+        // same session id would just get closed with 4004 again forever —
+        // stop and tell the user to start a fresh session instead.
+        shouldReconnect.current = false;
+        cleanupReconnectTimer();
+        setSessionLost(true);
+        setReconnectStatus("Session no longer exists on the server — it may have restarted.");
+        return;
+      }
       if (shouldReconnect.current && reconnectAttempts.current < 10) {
         reconnectAttempts.current++;
         const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
@@ -272,8 +291,16 @@ export default function SessionScreen() {
       </View>
 
       {reconnectStatus !== "" && (
-        <View style={styles.reconnectBanner}>
-          <Text style={styles.reconnectText}>{reconnectStatus}</Text>
+        <View style={[styles.reconnectBanner, sessionLost && styles.sessionLostBanner]}>
+          <Text style={[styles.reconnectText, sessionLost && styles.sessionLostText]}>{reconnectStatus}</Text>
+          {sessionLost && (
+            <TouchableOpacity
+              style={styles.newSessionBtn}
+              onPress={() => router.replace("/(tabs)/terminal")}
+            >
+              <Text style={styles.newSessionBtnText}>Start New Session</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -336,6 +363,10 @@ const styles = StyleSheet.create({
   fontBtn: { color: colors.primary, fontSize: 14, fontWeight: "700", fontFamily: "Inter_700Bold", paddingHorizontal: 8 },
   reconnectBanner: { backgroundColor: "rgba(255,170,0,0.15)", padding: 8, alignItems: "center" },
   reconnectText: { color: colors.warning, fontSize: 13, fontFamily: "Inter_500Medium" },
+  sessionLostBanner: { backgroundColor: "rgba(255,68,68,0.15)", gap: 8 },
+  sessionLostText: { color: colors.destructive, textAlign: "center" },
+  newSessionBtn: { backgroundColor: colors.destructive, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 },
+  newSessionBtnText: { color: colors.primaryForeground, fontSize: 13, fontWeight: "600", fontFamily: "Inter_600SemiBold" },
   outputContainer: { flex: 1, backgroundColor: colors.surface },
   outputContent: { padding: 12 },
   placeholder: { color: colors.mutedForeground, fontFamily: "Inter_400Regular" },
