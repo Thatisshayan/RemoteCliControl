@@ -42,4 +42,39 @@ platform :ios do
 
     match(type: "appstore", readonly: false)
   end
+
+  desc "List distribution certificates on the account, with id/serial/name/expiry (read-only, safe)"
+  lane :list_certs do
+    app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_content: ENV["ASC_KEY_CONTENT"],
+      is_key_content_base64: true
+    )
+
+    certs = Spaceship::ConnectAPI::Certificate.all
+    certs.each do |c|
+      UI.message("id=#{c.id} serial=#{c.serial_number} name=#{c.name} type=#{c.certificate_type} expires=#{c.expiration_date}")
+    end
+  end
+
+  desc "Revoke one certificate by its ASC resource id (pass CERT_ID env var). Irreversible."
+  lane :revoke_cert do
+    app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_content: ENV["ASC_KEY_CONTENT"],
+      is_key_content_base64: true
+    )
+
+    cert_id = ENV["CERT_ID"]
+    UI.user_error!("Set CERT_ID to the certificate's ASC resource id") unless cert_id
+
+    target = Spaceship::ConnectAPI::Certificate.all.find { |c| c.id == cert_id }
+    UI.user_error!("No certificate found with id=#{cert_id}") unless target
+
+    UI.message("Revoking id=#{target.id} serial=#{target.serial_number} name=#{target.name}")
+    target.delete!
+    UI.success("Revoked certificate id=#{target.id}")
+  end
 end

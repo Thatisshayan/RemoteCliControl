@@ -8,7 +8,11 @@ on:
         required: true
         default: 'beta'
         type: choice
-        options: [beta, bootstrap_certs]
+        options: [beta, bootstrap_certs, list_certs, revoke_cert]
+      cert_id:
+        description: 'ASC certificate id (only used by revoke_cert)'
+        required: false
+        default: ''
   push:
     tags:
       - "ios-v*"
@@ -65,4 +69,5 @@ jobs:
           ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ steps.match_auth.outputs.auth }}
+          CERT_ID: ${{ github.event.inputs.cert_id }}
         run: bundle exec fastlane ${{ github.event.inputs.lane || 'beta' }}
