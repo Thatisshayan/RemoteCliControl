@@ -10,6 +10,9 @@ importers:
 
   artifacts/api-server:
     dependencies:
+      '@remotectrl/api-zod':
+        specifier: workspace:*
+        version: link:../../lib/api-zod
       cors:
         specifier: ^2.8.5
         version: 2.8.6
