@@ -625,6 +625,7 @@ components:
       required: [version]
       properties:
         version: { type: string }
+        mobileMinVersion: { type: string }
     SuccessResponse:
       type: object
       required: [success]

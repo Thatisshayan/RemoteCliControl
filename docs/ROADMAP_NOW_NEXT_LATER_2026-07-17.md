@@ -104,7 +104,7 @@ Why it matters to a founder/operator:
 These are the highest-return tasks before any renewed Expo/TestFlight push.
 
 1. ~~Add end-to-end happy-path smoke coverage across connection, session, terminal, and files.~~ Done 2026-07-17: `artifacts/api-server/src/__tests__/smoke.e2e.test.ts` drives the real Express app and WebSocket upgrade handler end to end (connection create/activate, session create/list/close, terminal WS round-trip, file listing) with SSH/SFTP mocked only at the `sshManager` boundary.
-2. Add contract snapshot tests tying OpenAPI to generated/shared client artifacts.
+2. ~~Add contract snapshot tests tying OpenAPI to generated/shared client artifacts.~~ Done 2026-07-17: `artifacts/api-server/src/__tests__/contract-snapshot.test.ts` cross-checks `lib/api-spec/openapi.yaml` against the shared zod schemas (property-set parity for every documented component) and against the live route table (every documented path/method actually resolves through the real Express app). There is no code generator wiring these together (see CONTRIBUTING.md "Contract Changes") — this test is what makes drift between them fail loudly. It also caught and fixed one real pre-existing gap: `VersionResponseSchema`'s optional `mobileMinVersion` field was never documented in `openapi.yaml`.
 3. Enforce spec regeneration and generated-output cleanliness in CI.
 4. Add mobile tests for runtime config hydration and live backend URL switching.
 5. Add mobile tests for terminal WebSocket subprotocol auth construction.

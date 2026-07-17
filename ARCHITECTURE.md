@@ -144,8 +144,11 @@ After onboarding, screens do not depend on `EXPO_PUBLIC_DOMAIN` for live routing
 Latest synced implementation verified on Friday, July 17, 2026:
 
 - all edited TypeScript package configs compile
-- API server Vitest suite passes (13 files, 55 tests), including an
-  end-to-end happy-path smoke test that exercises the real Express app and
-  WebSocket upgrade handler across connection, session, terminal, and files
+- API server Vitest suite passes (14 files, 102 tests), including:
+  - an end-to-end happy-path smoke test that exercises the real Express app
+    and WebSocket upgrade handler across connection, session, terminal, and
+    files
+  - a contract-drift guard tying `lib/api-spec/openapi.yaml` to the shared
+    zod schemas and to the live route table
 
 See [docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md](./docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md) for the preservation record.

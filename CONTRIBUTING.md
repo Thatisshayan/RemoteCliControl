@@ -39,6 +39,8 @@ If you change a request/response shape:
 
 Do not land route changes without syncing the docs and shared types in the same change.
 
+`artifacts/api-server/src/__tests__/contract-snapshot.test.ts` enforces this mechanically: it fails if a documented OpenAPI component's property set drifts from its zod schema, or if a documented path/method stops resolving in the live Express app.
+
 ## Current Architecture Rules
 
 - Authenticated business routes belong under `/api/*`.

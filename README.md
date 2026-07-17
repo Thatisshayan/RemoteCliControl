@@ -146,8 +146,13 @@ The API server suite includes an end-to-end happy-path smoke test
 (`artifacts/api-server/src/__tests__/smoke.e2e.test.ts`) that drives the real
 Express app and WebSocket upgrade handler across connection setup, session
 create/list/close, terminal WebSocket round-trip, and file listing, with
-SSH/SFTP mocked only at the `sshManager` boundary. As of this pass: 13 test
-files, 55 tests, all passing.
+SSH/SFTP mocked only at the `sshManager` boundary.
+
+The suite also includes a contract-drift guard
+(`artifacts/api-server/src/__tests__/contract-snapshot.test.ts`) that checks
+`lib/api-spec/openapi.yaml` against the shared zod schemas and against the
+live route table, since nothing generates one from the other. As of this
+pass: 14 test files, 102 tests, all passing.
 
 ## Key Docs
 
