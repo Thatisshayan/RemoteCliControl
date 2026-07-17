@@ -49,3 +49,25 @@ As of Friday, July 17, 2026:
 ```bash
 node artifacts/mobile/node_modules/typescript/bin/tsc -p artifacts/mobile/tsconfig.json --noEmit
 ```
+
+## iOS TestFlight Releases (No EAS)
+
+iOS release builds do not use `eas build`. They run through
+`.github/workflows/ios-testflight.yml`, a `macos-latest` GitHub Actions
+workflow that runs `expo prebuild` + `fastlane` + `match` to build, sign,
+and upload to TestFlight, authenticated with an App Store Connect API key
+instead of an interactive Apple ID.
+
+Full step-by-step manual, one-time setup, and troubleshooting:
+[docs/IOS_TESTFLIGHT_CI_MANUAL.md](../../docs/IOS_TESTFLIGHT_CI_MANUAL.md).
+
+Quick reference for a normal release:
+
+```bash
+git tag ios-v1 && git push origin ios-v1
+```
+
+or **Actions → iOS TestFlight → Run workflow** with `lane: beta`.
+
+`.github/workflows/eas-build.yml` (EAS-based) is still present and unchanged
+for Android, or for iOS if EAS usage is restored later.

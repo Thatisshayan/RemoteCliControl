@@ -161,3 +161,19 @@ Latest synced implementation verified on Friday, July 17, 2026:
     zod schemas and to the live route table
 
 See [docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md](./docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md) for the preservation record.
+
+## iOS Release Pipeline
+
+`.github/workflows/ios-testflight.yml` builds and ships iOS to TestFlight
+without EAS Build and without a local Mac, using a `macos-latest` GitHub
+Actions runner and `fastlane` + `match`. It generates a native project via
+`expo prebuild` at build time (not committed), builds in place inside
+`artifacts/mobile/ios`, and authenticates to Apple with an App Store
+Connect API key — no Apple ID/2FA in the loop. `match`'s encrypted
+certificate/profile storage lives on this repo's own `ios-certs` branch,
+authenticated via the workflow's ambient `GITHUB_TOKEN`, not a separate
+repo or PAT.
+
+See [docs/IOS_TESTFLIGHT_CI_MANUAL.md](./docs/IOS_TESTFLIGHT_CI_MANUAL.md)
+for the full operating manual, including the fastlane lanes, one-time setup,
+and known failure modes already fixed in this pipeline.

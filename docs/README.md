@@ -18,6 +18,10 @@ This index exists so project documents remain easy to find for both humans and a
 
 - [docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md](./LATEST_IMPLEMENTATION_SYNC_2026-07-17.md): latest hardening and stabilization sync
 
+## Release Pipelines
+
+- [docs/IOS_TESTFLIGHT_CI_MANUAL.md](./IOS_TESTFLIGHT_CI_MANUAL.md): step-by-step manual for the fastlane/match-based iOS TestFlight pipeline (no EAS, no local Mac)
+
 ## Audits
 
 Tracked audits and summaries currently in the repo:

@@ -197,6 +197,22 @@ CI's `windows-workspace` job runs `pnpm typecheck`, `pnpm test`, and
 tagged releases — so the actual workspace script layer (not only the
 `ubuntu-latest` jobs) is proven on Windows continuously.
 
+## iOS Release Pipeline (No EAS)
+
+iOS builds ship to TestFlight via a `macos-latest` GitHub Actions workflow
+using `fastlane` + `match`, not EAS Build — EAS usage was exhausted, and this
+path needs no local Mac. See
+[docs/IOS_TESTFLIGHT_CI_MANUAL.md](./docs/IOS_TESTFLIGHT_CI_MANUAL.md) for
+the full step-by-step manual. Quick version:
+
+```bash
+git tag ios-v1 && git push origin ios-v1
+```
+
+or run **Actions → iOS TestFlight → Run workflow** with `lane: beta`
+manually. The Android/legacy iOS EAS workflow (`.github/workflows/eas-build.yml`)
+is unchanged and still available if EAS usage is restored.
+
 ## Key Docs
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
@@ -206,4 +222,5 @@ tagged releases — so the actual workspace script layer (not only the
 - [docs/governance/REPO_RULES.md](./docs/governance/REPO_RULES.md)
 - [docs/ROADMAP_NOW_NEXT_LATER_2026-07-17.md](./docs/ROADMAP_NOW_NEXT_LATER_2026-07-17.md)
 - [artifacts/mobile/BUILDING.md](./artifacts/mobile/BUILDING.md)
+- [docs/IOS_TESTFLIGHT_CI_MANUAL.md](./docs/IOS_TESTFLIGHT_CI_MANUAL.md)
 - [docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md](./docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md)

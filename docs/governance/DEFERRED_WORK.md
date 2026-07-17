@@ -30,9 +30,10 @@ When deferring work, add:
   Owner: Unassigned
 
 - Area: Expo and TestFlight distribution
+  Status: RESOLVED 2026-07-17.
   Deferred item: Choose and implement the final iOS build/distribution path.
   Reason deferred: Core repo stabilization was prioritized before distribution work.
-  Resume hint: Evaluate EAS, GitHub Actions on macOS with `expo prebuild`, committed native iOS project, or Xcode Cloud.
+  Resolution: Implemented `.github/workflows/ios-testflight.yml` — a `macos-latest` GitHub Actions runner using `expo prebuild` (native project generated at build time, not committed) plus `fastlane` + `match` for signing and TestFlight upload, authenticated via an App Store Connect API key. Chosen over EAS Build because EAS usage was exhausted; chosen over a committed native project because `expo prebuild --clean` at build time avoids drift between the Expo config and a hand-maintained native project. Full manual: `docs/IOS_TESTFLIGHT_CI_MANUAL.md`. `.github/workflows/eas-build.yml` remains available unchanged for Android or if EAS usage is restored.
   Owner: Unassigned
 
 - Area: Shared contract generation

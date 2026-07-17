@@ -63,6 +63,7 @@ When behavior changes, sync at least:
 - `docs/governance/REPO_RULES.md`, if repo workflow or agent expectations changed
 - `docs/governance/DEFERRED_WORK.md`, if any part of the requested work was deferred
 - `artifacts/mobile/BUILDING.md`
+- `docs/IOS_TESTFLIGHT_CI_MANUAL.md`, if the iOS release pipeline changed
 - any affected public/legal docs
 - preservation note in `docs/` if the change is architectural
 
