@@ -167,6 +167,11 @@ WebSocket URL/subprotocol construction extracted into
 WebSocket subprotocol only when present. As of this pass: 2 test files, 18
 tests, all passing.
 
+CI's `windows-workspace` job runs `pnpm typecheck`, `pnpm test`, and
+`pnpm build:server` on `windows-latest` on every push/PR — not just on
+tagged releases — so the actual workspace script layer (not only the
+`ubuntu-latest` jobs) is proven on Windows continuously.
+
 ## Key Docs
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
