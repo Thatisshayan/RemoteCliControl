@@ -34,3 +34,9 @@ When deferring work, add:
   Reason deferred: Core repo stabilization was prioritized before distribution work.
   Resume hint: Evaluate EAS, GitHub Actions on macOS with `expo prebuild`, committed native iOS project, or Xcode Cloud.
   Owner: Unassigned
+
+- Area: Shared contract generation
+  Deferred item: Build a real code generator so `lib/api-spec/openapi.yaml`, `lib/api-zod/src/schemas.ts`, and `lib/api-client-react/src/hooks.ts` are no longer three independently hand-maintained sources of truth, then enforce in CI that regenerating from the spec produces no diff against what's committed.
+  Reason deferred: Roadmap Now-item 3 ("enforce spec regeneration and generated-output cleanliness in CI") assumed this generator already existed. It doesn't — all three files are hand-written today (see CONTRIBUTING.md "Contract Changes"). Building one is a real architecture change (pick a direction: generate zod+client from the OpenAPI spec, e.g. via `openapi-typescript`/`orval`, or generate the OpenAPI spec from the zod schemas via `zod-to-openapi`; migrate the hand-written files to generated output; verify nothing behavioral breaks) and was judged out of scope for a single roadmap-item pass. In the meantime, `artifacts/api-server/src/__tests__/contract-snapshot.test.ts` (added 2026-07-17) catches drift between the three files by comparison rather than by generation, and CI already runs it on every push/PR via the existing `test` job.
+  Resume hint: Pick a generation direction (spec-first vs schema-first) before writing any code, since it changes which file becomes hand-authored and which two become generated. Whichever direction is chosen, add a CI step that regenerates and diffs against committed output, failing the build on any difference. Once real generation exists, contract-snapshot.test.ts's regex-based OpenAPI parsing can likely be deleted in favor of asserting against the generator's own output.
+  Owner: Unassigned
