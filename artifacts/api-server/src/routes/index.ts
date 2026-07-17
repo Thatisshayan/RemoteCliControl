@@ -1,5 +1,4 @@
 import { Router } from "express";
-import healthRoutes from "./health.js";
 import connectionRoutes from "./connection.js";
 import sessionsRoutes from "./sessions.js";
 import filesRoutes from "./files.js";
@@ -8,7 +7,6 @@ import commandsRoutes from "./commands.js";
 import pushRoutes from "./push.js";
 
 const router = Router();
-router.use(healthRoutes);
 router.use(connectionRoutes);
 router.use(sessionsRoutes);
 router.use(filesRoutes);

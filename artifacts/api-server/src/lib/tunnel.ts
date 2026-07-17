@@ -5,6 +5,7 @@ import logger from "./logger.js";
 
 let tunnelProcess: ChildProcess | null = null;
 let tunnelUrl: string | null = null;
+let startupTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const TUNNEL_URL_PATH = process.env.TUNNEL_URL_PATH || path.join(process.cwd(), "data", "tunnel-url.txt");
 
@@ -49,6 +50,10 @@ export function startTunnel(port: number): Promise<string> {
         tunnelUrl = url;
         logger.info({ tunnelUrl: url }, "Cloudflare Tunnel active");
         writeTunnelUrl(url);
+        if (startupTimeout) {
+          clearTimeout(startupTimeout);
+          startupTimeout = null;
+        }
         resolve(url);
       }
     });
@@ -60,6 +65,11 @@ export function startTunnel(port: number): Promise<string> {
     });
 
     tunnelProcess.on("exit", (code) => {
+      if (startupTimeout) {
+        clearTimeout(startupTimeout);
+        startupTimeout = null;
+      }
+      tunnelUrl = null;
       if (!tunnelUrl) {
         logger.warn({ exitCode: code }, "Cloudflare Tunnel exited before providing URL");
         tunnelProcess = null;
@@ -67,7 +77,7 @@ export function startTunnel(port: number): Promise<string> {
       }
     });
 
-    setTimeout(() => {
+    startupTimeout = setTimeout(() => {
       if (!tunnelUrl) {
         logger.warn("Cloudflare Tunnel did not produce a URL within 30s");
         resolve("");
@@ -77,11 +87,16 @@ export function startTunnel(port: number): Promise<string> {
 }
 
 export function stopTunnel(): void {
+  if (startupTimeout) {
+    clearTimeout(startupTimeout);
+    startupTimeout = null;
+  }
   if (tunnelProcess) {
     logger.info("Stopping Cloudflare Tunnel");
     tunnelProcess.kill("SIGTERM");
     tunnelProcess = null;
   }
+  tunnelUrl = null;
 }
 
 export function getTunnelUrl(): string | null {

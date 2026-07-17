@@ -1,19 +1,19 @@
 import { Router } from "express";
 import { execCommand } from "../lib/sshManager.js";
+import { z } from "zod";
+import { parseParams, sendError } from "../lib/http.js";
 const router = Router();
 
 router.get("/processes", async (_req, res, next) => {
   try {
-    const cmd = 'powershell.exe -NoProfile -Command "Get-Process | Select-Object -Property Name,Id,CPU,WorkingSet,Responding | ConvertTo-Csv -NoTypeInformation"';
+    const cmd =
+      'powershell.exe -NoProfile -Command "Get-Process | Select-Object -Property Name,Id,CPU,WorkingSet,Responding | ConvertTo-Json -Compress"';
     const output = await execCommand(cmd);
-    const lines = output.trim().split("\n").filter((l) => l.trim());
-    if (lines.length < 2) return res.json([]);
-
-    const headers = lines[0].split(",").map((h) => h.replace(/"/g, "").trim());
-    const processes = lines.slice(1).map((line) => {
-      const vals = line.split(",").map((v) => v.replace(/"/g, "").trim());
-      const obj: any = {};
-      headers.forEach((h, i) => { obj[h] = vals[i]; });
+    const raw = output.trim();
+    if (!raw) return res.json([]);
+    const parsed = JSON.parse(raw);
+    const processList = Array.isArray(parsed) ? parsed : [parsed];
+    const processes = processList.map((obj: any) => {
       return {
         pid: parseInt(obj.Id || "0"),
         name: obj.Name || "",
@@ -31,10 +31,7 @@ router.get("/processes", async (_req, res, next) => {
 
 router.delete("/processes/:pid", async (req, res, next) => {
   try {
-    if (!/^\d+$/.test(req.params.pid)) {
-      return res.status(400).json({ error: "Invalid PID" });
-    }
-    const pid = req.params.pid;
+    const { pid } = parseParams(z.object({ pid: z.string().regex(/^\d+$/) }), req);
     await execCommand(`powershell.exe -NoProfile -Command "Stop-Process -Id ${pid} -Force"`);
     res.json({ success: true });
   } catch (e: any) {

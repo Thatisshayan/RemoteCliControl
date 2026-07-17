@@ -8,6 +8,8 @@ import logger from "./lib/logger.js";
 import healthRoutes from "./routes/health.js";
 import tunnelRoutes from "./routes/tunnel.js";
 import setupRoutes from "./routes/setup.js";
+import versionRoutes from "./routes/version.js";
+import { HttpError, sendError } from "./lib/http.js";
 
 const app = express();
 
@@ -17,6 +19,7 @@ app.use(pinoHttp({ logger }));
 
 app.use("/health", healthRoutes);
 app.use("/tunnel-url", tunnelRoutes);
+app.use("/version", versionRoutes);
 app.use("/api/setup", setupRoutes);
 
 const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
@@ -28,7 +31,10 @@ app.use("/api", generalLimiter, authMiddleware, routes);
 
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   logger.error({ err, url: req.url, method: req.method }, "Unhandled request error");
-  res.status(err.status || 500).json({ error: err.message || "INTERNAL_ERROR", code: err.code || "INTERNAL_ERROR" });
+  if (err instanceof HttpError) {
+    return sendError(res, err.status, err.code, err.message, err.details);
+  }
+  return sendError(res, err.status || 500, err.code || "INTERNAL_ERROR", err.message || "INTERNAL_ERROR");
 });
 
 export default app;

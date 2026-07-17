@@ -9,7 +9,7 @@ const router = Router();
 // it must never be reachable from anything but the machine itself — closes
 // the race where a remote client could complete setup before the owner does
 // if the port is reachable off-box (LAN, or a tunnel started too early).
-function loopbackOnly(req: Request, res: Response, next: NextFunction) {
+export function loopbackOnly(req: Request, res: Response, next: NextFunction) {
   const ip = req.socket.remoteAddress || "";
   const isLoopback = ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
   if (!isLoopback) {

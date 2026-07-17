@@ -1,159 +1,66 @@
-# Contributing to RemoteCTRL
+# Contributing
 
-## Prerequisites
-
-- **Node.js** v20+
-- **pnpm** v9+ (`npm install -g pnpm`)
-- **Windows OpenSSH Server** running on the target machine (required for real SSH tests)
-
----
-
-## Local Setup
+## Setup
 
 ```bash
 git clone https://github.com/Thatisshayan/RemoteCliControl.git
 cd RemoteCliControl
 pnpm install
-
-# Configure environment
 cp .env.example .env
-# Edit .env: set PORT=3000 (API_TOKEN is optional for local dev)
-
 cp artifacts/mobile/.env.example artifacts/mobile/.env
-# Edit: set EXPO_PUBLIC_DOMAIN=http://localhost:3000
-
-# Build backend
 pnpm build:server
-
-# Start backend
 PORT=3000 node artifacts/api-server/dist/index.mjs
-
-# Start mobile (separate terminal)
 pnpm dev:mobile
 ```
 
----
+The mobile `.env` fallback is optional. Normal usage should go through onboarding/runtime config.
 
-## Development Mode (hot reload)
+## Required Checks
 
-```bash
-# Backend — tsx watch (no build step needed)
-pnpm dev:server
-
-# Mobile
-pnpm dev:mobile
-```
-
----
-
-## Running Tests
+Before committing:
 
 ```bash
-# All backend tests
-pnpm test
-
-# With coverage report
-pnpm --filter api-server test:coverage
-
-# Type-check all packages
 pnpm typecheck
+pnpm test
+pnpm lint
 ```
 
-Test files live in:
-- `artifacts/api-server/src/lib/__tests__/` — unit tests (store, auth)
-- `artifacts/api-server/src/routes/__tests__/` — validation tests
-- `artifacts/api-server/src/__tests__/` — integration tests (health endpoint)
+If `pnpm` tries to touch the registry in a restricted environment, use the local TypeScript/Vitest binaries directly.
 
----
+## Contract Changes
 
-## Regenerating the API Client
+If you change a request/response shape:
 
-After any change to `lib/api-spec/openapi.yaml`:
+1. Update `lib/api-spec/openapi.yaml`
+2. Update `lib/api-zod/src/schemas.ts`
+3. Update any server validation using the shared schemas
+4. Update client/mobile usage
+5. Update docs
 
-```bash
-pnpm --filter @remotectrl/api-zod generate
-pnpm --filter @remotectrl/api-client-react generate
-```
+Do not land route changes without syncing the docs and shared types in the same change.
 
-The OpenAPI spec is the source of truth. Keep it in sync with every new or modified route.
+## Current Architecture Rules
 
----
+- Authenticated business routes belong under `/api/*`.
+- `/health`, `/tunnel-url`, `/version`, and `/api/setup/*` stay public.
+- The server owns Cloudflare Tunnel lifecycle.
+- The tray is a supervisor/status surface only.
+- WebSocket terminal auth uses `sec-websocket-protocol`, not `?token=`.
+- Mobile runtime URL/token come from stored runtime config after onboarding.
+- Push UI is currently unavailable by design in the stabilized mobile build.
 
-## Building the Backend
+## Documentation Rule
 
-```bash
-pnpm build:server
-# Output: artifacts/api-server/dist/index.mjs
-```
+When behavior changes, sync at least:
 
-The build uses esbuild. `ssh2` and `ws` are **externalized** (not bundled) because they use native modules. Never import them with a plain `import` — always use `createRequire`:
+- `README.md`
+- `ARCHITECTURE.md`
+- `artifacts/mobile/BUILDING.md`
+- any affected public/legal docs
+- preservation note in `docs/` if the change is architectural
 
-```typescript
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
-const { Client } = require("ssh2") as typeof import("ssh2");
-```
+## Verification Reference
 
----
+Latest architecture sync preserved in:
 
-## Branch Model
-
-All completed phases are merged into `main`. Active branches:
-
-| Branch | Purpose |
-|--------|---------|
-| `main` | Stable, production-ready |
-| `phase1branch` | Security hardening (merged) |
-| `phase2branch` | Reliability & WebSocket (merged) |
-| `phase4branch` | Connection pooling (merged) |
-| `phase5branch` | DevOps / Docker / CI (merged) |
-| `phase6branch` | Observability (merged) |
-| `phase8branch` | Testing (merged) |
-| `phase10branch` | Final QA + orchestrator fixes (merged) |
-
-For new work: branch off `main`, use `feat/`, `fix/`, or `chore/` prefix.
-
----
-
-## Commit Style
-
-Use [Conventional Commits](https://www.conventionalcommits.org/):
-
-```
-feat: add SSH key passphrase support
-fix: forward WebSocket input to SSH shell
-docs: update README quickstart
-chore: bump pnpm-lock.yaml
-refactor: extract READY_TIMEOUT constant
-test: add store persistence tests
-```
-
----
-
-## Code Conventions
-
-- **TypeScript strict mode** across all packages — `tsc --noEmit` must pass before commit
-- **Colors**: never hardcode hex values in mobile — always use `colors.*` from `constants/colors.ts`
-- **No comments** unless the *why* is non-obvious (a hidden constraint, workaround, invariant)
-- **Error handling**: use `next(err)` in Express routes — the global error handler in `app.ts` formats all errors
-- **Secrets**: `password`, `privateKey`, `passphrase` must never appear in API responses or logs — use `getActiveConnectionSafe()` / `getConnectionsSafe()` and trust pino redaction
-
----
-
-## Docker
-
-```bash
-# Production build
-docker compose up --build
-
-# Development (live code — no build step)
-docker compose -f docker-compose.dev.yml up
-```
-
-The `data/` directory is mounted as a volume so `store.json` persists across container restarts.
-
----
-
-## Questions / Issues
-
-Open an issue on GitHub: https://github.com/Thatisshayan/RemoteCliControl/issues
+- [docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md](./docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md)

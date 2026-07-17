@@ -1,7 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import crypto from "crypto";
-
-const API_TOKEN = process.env.API_TOKEN;
+import { sendError } from "./http.js";
 
 export function timingSafeTokenEqual(a: string, b: string): boolean {
   const bufA = Buffer.from(a);
@@ -15,16 +14,17 @@ export function timingSafeTokenEqual(a: string, b: string): boolean {
 }
 
 export function authMiddleware(req: Request, res: Response, next: NextFunction) {
+  const API_TOKEN = process.env.API_TOKEN;
   if (!API_TOKEN) {
     return next();
   }
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Missing Authorization header" });
+    return sendError(res, 401, "AUTH_REQUIRED", "Missing Authorization header");
   }
   const token = authHeader.slice(7);
   if (!timingSafeTokenEqual(token, API_TOKEN)) {
-    return res.status(401).json({ error: "Invalid API token" });
+    return sendError(res, 401, "AUTH_INVALID", "Invalid API token");
   }
   next();
 }

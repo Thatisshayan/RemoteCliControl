@@ -6,12 +6,10 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
 import * as SplashScreen from "expo-splash-screen";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import ErrorBoundary from "../components/ErrorBoundary";
-import { setBaseUrl, setApiToken } from "@remotectrl/api-client-react";
 import { colors } from "../constants/colors";
 import { debugLog, installGlobalErrorTrap } from "../lib/debug-logger";
-import { getStoredApiToken } from "../lib/secure-token";
+import { RuntimeConfigProvider } from "../lib/runtime-config";
 
 let __sideEffectsDone = false;
 
@@ -34,17 +32,6 @@ async function bootstrapBackground() {
     debugLog("splash_preventAutoHide_OK", {}, "BOOT");
   } catch (e: any) {
     debugLog("splash_preventAutoHide_FAIL", { msg: e?.message, stack: e?.stack }, "BOOT");
-  }
-  try {
-    const [savedUrl, savedToken] = await Promise.all([
-      AsyncStorage.getItem("server-url"),
-      getStoredApiToken(),
-    ]);
-    debugLog("loadAsyncStorageOverrides_done", { savedUrl, hasToken: !!savedToken }, "H3");
-    if (savedUrl) setBaseUrl(savedUrl);
-    if (savedToken) setApiToken(savedToken);
-  } catch (e: any) {
-    debugLog("loadAsyncStorageOverrides_FAIL", { msg: e?.message }, "H3");
   }
   debugLog("bootstrap_deferred_done", {}, "BOOT");
 }
@@ -70,20 +57,22 @@ function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <ErrorBoundary>
-            <QueryClientProvider client={queryClient}>
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: { backgroundColor: colors.background },
-                  }}
-                >
-                  <Stack.Screen name="onboarding" />
-                  <Stack.Screen name="(tabs)" />
-                  <Stack.Screen name="session/[sessionId]" options={{ presentation: "fullScreenModal" }} />
-                  <Stack.Screen name="connection" options={{ presentation: "modal" }} />
-                </Stack>
-                <StatusBar style="light" />
-              </QueryClientProvider>
+            <RuntimeConfigProvider>
+              <QueryClientProvider client={queryClient}>
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      contentStyle: { backgroundColor: colors.background },
+                    }}
+                  >
+                    <Stack.Screen name="onboarding" />
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="session/[sessionId]" options={{ presentation: "fullScreenModal" }} />
+                    <Stack.Screen name="connection" options={{ presentation: "modal" }} />
+                  </Stack>
+                  <StatusBar style="light" />
+                </QueryClientProvider>
+            </RuntimeConfigProvider>
             </ErrorBoundary>
           </SafeAreaProvider>
         </GestureHandlerRootView>

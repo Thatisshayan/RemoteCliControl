@@ -3,6 +3,8 @@ import { setupWebSocket } from "./lib/wsHandler.js";
 import { listSessions, closeSession } from "./lib/sshManager.js";
 import { startTunnel, stopTunnel } from "./lib/tunnel.js";
 import logger from "./lib/logger.js";
+import { notifyServerStarted } from "./lib/pushNotifications.js";
+import packageJson from "../package.json" with { type: "json" };
 
 const PORT = process.env.PORT;
 const API_TOKEN = process.env.API_TOKEN;
@@ -12,6 +14,8 @@ if (!PORT) {
 }
 
 const tunnelEnabled = process.env.CLOUDFLARE_TUNNEL === "true" || process.env.CLOUDFLARE_TUNNEL === "1";
+let shuttingDown = false;
+let websocketRuntime: { close(): void } | null = null;
 
 if (!API_TOKEN) {
   if (tunnelEnabled) {
@@ -23,8 +27,16 @@ if (!API_TOKEN) {
 }
 
 const server = app.listen(Number(PORT), async () => {
-  logger.info(`Server running on port ${PORT}`);
-  setupWebSocket(server);
+  logger.info({
+    port: Number(PORT),
+    authMode: API_TOKEN ? "token" : "none",
+    tunnelEnabled,
+    version: packageJson.version,
+  }, "Server started");
+  websocketRuntime = setupWebSocket(server);
+  notifyServerStarted().catch((err) => {
+    logger.warn({ err }, "Failed to send startup push notification");
+  });
 
   if (tunnelEnabled) {
     try {
@@ -39,7 +51,11 @@ const server = app.listen(Number(PORT), async () => {
 });
 
 function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
   logger.info("Shutdown signal received");
+  websocketRuntime?.close();
+  websocketRuntime = null;
   stopTunnel();
   const active = listSessions();
   logger.info({ count: active.length }, "Closing active SSH sessions");

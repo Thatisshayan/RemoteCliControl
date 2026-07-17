@@ -1,17 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
 import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
-import { setBaseUrl } from "@remotectrl/api-client-react";
 import { colors } from "../../constants/colors";
+import { useRuntimeConfig } from "../../lib/runtime-config";
 
 export default function BackendSetupScreen() {
   const router = useRouter();
+  const { baseUrl, saveBaseUrl } = useRuntimeConfig();
   const [url, setUrl] = useState("");
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [connected, setConnected] = useState(false);
+
+  useEffect(() => {
+    setUrl(baseUrl);
+  }, [baseUrl]);
 
   const handleTest = async () => {
     if (!url.trim()) return;
@@ -42,8 +46,7 @@ export default function BackendSetupScreen() {
     if (!connected) return;
     const baseUrl = url.replace(/\/+$/, "");
     try {
-      await AsyncStorage.setItem("server-url", baseUrl);
-      setBaseUrl(baseUrl);
+      await saveBaseUrl(baseUrl);
       router.push("/onboarding/step3");
     } catch (err: any) {
       Alert.alert("Error", "Failed to save server URL. Please try again.");

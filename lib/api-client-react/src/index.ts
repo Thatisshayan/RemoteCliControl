@@ -1,11 +1,32 @@
-export { setBaseUrl, getBaseUrl, setApiToken, api } from "./client";
+export {
+  setBaseUrl,
+  getBaseUrl,
+  setApiToken,
+  getApiToken,
+  getAuthHeaders,
+  buildWebSocketUrl,
+  api,
+  publicApi,
+} from "./client";
 export * from "./hooks";
 export type {
   ConnectionConfig,
   ConnectionProfile,
+  ConnectionProfileSafe,
+  ConnectionProfileSecret,
+  PasswordAuthConnectionInput,
+  KeyAuthConnectionInput,
+  NamedConnectionInput,
   Session,
+  SessionRenameInput,
   FileItem,
+  FileListResponse,
+  FileReadResponse,
   RemoteProcess,
   SavedCommand,
   TestResult,
+  PushPreferences,
+  HealthResponse,
+  TunnelStatusResponse,
+  VersionResponse,
 } from "@remotectrl/api-zod";

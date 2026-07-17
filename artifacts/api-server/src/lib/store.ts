@@ -1,17 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { encryptCredential, decryptCredential } from "./credentialCrypto.js";
-
-interface ConnectionProfile {
-  id: string;
-  name: string;
-  host: string;
-  port: number;
-  username: string;
-  password: string;
-  privateKey?: string;
-  passphrase?: string;
-}
+import type { ConnectionProfileSafe, ConnectionProfileSecret } from "./contracts.js";
 
 interface SavedCommand {
   id: string;
@@ -35,7 +25,7 @@ export interface NotificationPreferences {
 }
 
 interface StoreState {
-  connections: ConnectionProfile[];
+  connections: ConnectionProfileSecret[];
   activeConnectionId: string | null;
   commands: SavedCommand[];
   pushDevices: PushDevice[];
@@ -49,9 +39,24 @@ function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
 
-function decryptConnection(c: ConnectionProfile): ConnectionProfile {
+function normalizeConnection(c: Partial<ConnectionProfileSecret>): ConnectionProfileSecret {
+  const authMode = c.authMode ?? (c.privateKey ? "key" : "password");
   return {
-    ...c,
+    id: c.id || generateId(),
+    name: c.name || "Default",
+    host: c.host || "",
+    port: c.port || 22,
+    username: c.username || "",
+    authMode,
+    password: c.password || undefined,
+    privateKey: c.privateKey || undefined,
+    passphrase: c.passphrase || undefined,
+  };
+}
+
+function decryptConnection(c: ConnectionProfileSecret): ConnectionProfileSecret {
+  return {
+    ...normalizeConnection(c),
     password: decryptCredential(c.password) ?? "",
     privateKey: decryptCredential(c.privateKey),
     passphrase: decryptCredential(c.passphrase),
@@ -63,7 +68,9 @@ function loadState(): StoreState {
     if (fs.existsSync(FILE_PATH)) {
       const raw = fs.readFileSync(FILE_PATH, "utf8");
       const parsed: StoreState = JSON.parse(raw);
-      parsed.connections = (parsed.connections || []).map(decryptConnection);
+      parsed.connections = (parsed.connections || []).map((connection) =>
+        decryptConnection(normalizeConnection(connection)),
+      );
       return parsed;
     }
   } catch (e) {
@@ -99,21 +106,28 @@ function persist() {
 }
 
 // Connection (active profile) helpers
-export function getActiveConnection(): ConnectionProfile | null {
+export function getActiveConnection(): ConnectionProfileSecret | null {
   if (!state.activeConnectionId) return null;
   return state.connections.find((c) => c.id === state.activeConnectionId) || null;
 }
 
-export function getActiveConnectionSafe(): any {
-  const conn = getActiveConnection();
-  if (!conn) return null;
-  const { password, privateKey, passphrase, ...rest } = conn as any;
+export function toSafeConnectionProfile(conn: ConnectionProfileSecret): ConnectionProfileSafe {
   return {
-    ...(rest as any),
-    password: "***",
-    privateKey: privateKey ? "***" : undefined,
-    passphrase: passphrase ? "***" : undefined,
+    id: conn.id,
+    name: conn.name,
+    host: conn.host,
+    port: conn.port,
+    username: conn.username,
+    authMode: conn.authMode,
+    hasPassword: Boolean(conn.password),
+    hasPrivateKey: Boolean(conn.privateKey),
+    hasPassphrase: Boolean(conn.passphrase),
   };
+}
+
+export function getActiveConnectionSafe(): ConnectionProfileSafe | null {
+  const conn = getActiveConnection();
+  return conn ? toSafeConnectionProfile(conn) : null;
 }
 
 export function setActiveConnection(id: string): void {
@@ -122,28 +136,22 @@ export function setActiveConnection(id: string): void {
 }
 
 // Multi-profile helpers
-export function getConnections(): ConnectionProfile[] {
+export function getConnections(): ConnectionProfileSecret[] {
   return state.connections;
 }
 
-export function getConnectionsSafe(): Array<Omit<ConnectionProfile, "password" | "privateKey" | "passphrase"> & { password?: string; privateKey?: string; passphrase?: string }> {
-  return state.connections.map((c) => {
-    const { password, privateKey, passphrase, ...rest } = c;
-    return {
-      ...rest,
-      password: "***",
-      privateKey: privateKey ? "***" : undefined,
-      passphrase: passphrase ? "***" : undefined,
-    };
-  });
+export function getConnectionsSafe(): ConnectionProfileSafe[] {
+  return state.connections.map(toSafeConnectionProfile);
 }
 
-export function getConnectionById(id: string): ConnectionProfile | undefined {
+export function getConnectionById(id: string): ConnectionProfileSecret | undefined {
   return state.connections.find((c) => c.id === id);
 }
 
-export function addConnection(data: Omit<ConnectionProfile, "id">): ConnectionProfile {
-  const profile: ConnectionProfile = { ...data, id: generateId() };
+export function addConnection(
+  data: Omit<ConnectionProfileSecret, "id" | "authMode"> & Partial<Pick<ConnectionProfileSecret, "authMode">>,
+): ConnectionProfileSecret {
+  const profile = normalizeConnection({ ...data, id: generateId() });
   state.connections.push(profile);
   if (state.connections.length === 1) {
     state.activeConnectionId = profile.id;

@@ -1,28 +1,25 @@
 import { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
-import { setApiToken } from "@remotectrl/api-client-react";
 import { colors } from "../../constants/colors";
-import { setStoredApiToken } from "../../lib/secure-token";
+import { useRuntimeConfig } from "../../lib/runtime-config";
 
 export default function ApiTokenScreen() {
   const router = useRouter();
+  const { saveApiToken, markOnboardingComplete } = useRuntimeConfig();
   const [token, setToken] = useState("");
   const [showToken, setShowToken] = useState(false);
 
   const handleContinue = async () => {
-    if (token.trim()) {
-      await setStoredApiToken(token.trim());
-      setApiToken(token.trim());
-    }
-    await AsyncStorage.setItem("onboardingComplete", "true");
+    await saveApiToken(token.trim());
+    await markOnboardingComplete();
     router.replace("/(tabs)/terminal");
   };
 
   const handleSkip = async () => {
-    await AsyncStorage.setItem("onboardingComplete", "true");
+    await saveApiToken("");
+    await markOnboardingComplete();
     router.replace("/(tabs)/terminal");
   };
 

@@ -4,7 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
-import { useListFiles, useDeleteFile, useMakeDirectory, useReadFile } from "@remotectrl/api-client-react";
+import { getAuthHeaders, getBaseUrl, useListFiles, useDeleteFile, useMakeDirectory, useReadFile } from "@remotectrl/api-client-react";
 import Card from "../../components/ui/Card";
 import EmptyState from "../../components/ui/EmptyState";
 import LoadingState from "../../components/ui/LoadingState";
@@ -12,18 +12,8 @@ import ActionSheet from "../../components/ui/ActionSheet";
 import { colors } from "../../constants/colors";
 import type { FileItem } from "@remotectrl/api-zod";
 
-const DOMAIN_RAW = process.env.EXPO_PUBLIC_DOMAIN || "http://localhost:3000";
-const BASE_URL = DOMAIN_RAW.startsWith("http") ? DOMAIN_RAW : `http://${DOMAIN_RAW}`;
-
 const BINARY_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".mp4", ".zip", ".exe", ".pdf", ".bin", ".dll", ".so", ".dmg", ".iso"]);
 const MAX_PREVIEW_SIZE = 100 * 1024; // 100KB limit for preview
-
-function getAuthHeaders(): Record<string, string> {
-  const token = (globalThis as any).EXPO_PUBLIC_API_TOKEN as string | undefined;
-  const headers: Record<string, string> = {};
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-  return headers;
-}
 
 function isBinary(name: string): boolean {
   const ext = name.toLowerCase().slice(name.lastIndexOf("."));
@@ -109,7 +99,7 @@ export default function FilesScreen() {
     setSelectedFile(null);
     setDownloading(true);
     try {
-      const url = `${BASE_URL}/api/files/download?path=${encodeURIComponent(item.path)}`;
+      const url = `${getBaseUrl()}/api/files/download?path=${encodeURIComponent(item.path)}`;
       const localUri = FileSystem.documentDirectory + item.name;
       const headers = getAuthHeaders();
       await FileSystem.downloadAsync(url, localUri, { headers });
@@ -135,7 +125,7 @@ export default function FilesScreen() {
       const formData = new FormData();
       formData.append("file", { uri: asset.uri, name: filename, type: asset.mimeType || "application/octet-stream" } as any);
       const headers = getAuthHeaders();
-      const res = await fetch(`${BASE_URL}/api/files/upload?path=${encodeURIComponent(remotePath)}`, {
+      const res = await fetch(`${getBaseUrl()}/api/files/upload?path=${encodeURIComponent(remotePath)}`, {
         method: "POST",
         headers,
         body: formData,

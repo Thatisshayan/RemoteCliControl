@@ -56,7 +56,6 @@ async function main(): Promise<void> {
   const serverScript = path.join(process.cwd(), "dist", "index.mjs");
 
   let serverProcess: ChildProcess | null = null;
-  let tunnelProcess: ChildProcess | null = null;
   let statusInterval: ReturnType<typeof setInterval> | null = null;
 
   function startServer(): void {
@@ -84,22 +83,8 @@ async function main(): Promise<void> {
     });
   }
 
-  function startTunnel(): void {
-    const cloudflaredPath = path.join(process.cwd(), "cloudflared.exe");
-    if (!config?.CLOUDFLARE_TUNNEL || !fs.existsSync(cloudflaredPath)) return;
-    tunnelProcess = spawn(cloudflaredPath, ["tunnel", "--url", `http://localhost:${port}`], {
-      stdio: ["ignore", "ignore", "pipe"],
-      windowsHide: true,
-    });
-    tunnelProcess.on("exit", (code) => {
-      console.log("Tunnel exited with code", code);
-      tunnelProcess = null;
-    });
-  }
-
   function stopAll(): void {
     if (statusInterval) { clearInterval(statusInterval); statusInterval = null; }
-    if (tunnelProcess) { tunnelProcess.kill("SIGTERM"); tunnelProcess = null; }
     if (serverProcess) { serverProcess.kill(); serverProcess = null; }
   }
 
@@ -127,7 +112,6 @@ async function main(): Promise<void> {
   }
 
   startServer();
-  startTunnel();
 
   const trayItems = [
     { title: "RemoteCTRL", tooltip: "", checked: false, enabled: false },
@@ -182,7 +166,6 @@ async function main(): Promise<void> {
       case "Restart Server":
         stopAll();
         startServer();
-        startTunnel();
         break;
       case "Stop Server":
       case "Quit":

@@ -1,53 +1,34 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-
-vi.mock("fs");
-vi.mock("../../lib/config.js", () => ({
-  loadConfig: vi.fn(),
-  createDefaultConfig: vi.fn(),
-  saveConfig: vi.fn(),
-  generateToken: vi.fn(),
-}));
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { loopbackOnly } from "../setup.js";
 
 describe("setup route — loopback restriction", () => {
+  let res: any;
+  let next: any;
+
   beforeEach(() => {
-    vi.resetModules();
-    vi.clearAllMocks();
+    res = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() };
+    next = vi.fn();
   });
 
-  function findLoopbackMiddleware(router: any) {
-    // The first layer registered via router.use() before any route handlers.
-    return router.stack.find((layer: any) => !layer.route)?.handle;
-  }
-
-  it("rejects requests from non-loopback addresses with 403", async () => {
-    const { default: router } = await import("../setup.js");
-    const middleware = findLoopbackMiddleware(router);
-    expect(middleware).toBeDefined();
-
+  it("rejects requests from non-loopback addresses with 403", () => {
     const req: any = { socket: { remoteAddress: "203.0.113.5" } };
-    const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() };
-    const next = vi.fn();
 
-    middleware(req, res, next);
+    loopbackOnly(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ error: "Setup is only available from the local machine" });
     expect(next).not.toHaveBeenCalled();
   });
 
   it.each(["127.0.0.1", "::1", "::ffff:127.0.0.1"])(
-    "allows requests from loopback address %s",
-    async (ip) => {
-      const { default: router } = await import("../setup.js");
-      const middleware = findLoopbackMiddleware(router);
-
+    "allows loopback address %s",
+    (ip) => {
       const req: any = { socket: { remoteAddress: ip } };
-      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() };
-      const next = vi.fn();
 
-      middleware(req, res, next);
+      loopbackOnly(req, res, next);
 
       expect(next).toHaveBeenCalled();
       expect(res.status).not.toHaveBeenCalled();
-    }
+    },
   );
 });

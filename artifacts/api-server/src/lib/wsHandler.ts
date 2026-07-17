@@ -18,7 +18,7 @@ export function setupWebSocket(server: Server) {
   });
   const buffers = new Map<any, string>();
 
-  server.on("upgrade", (request, socket, head) => {
+  const upgradeHandler = (request: any, socket: any, head: any) => {
     const url = new URL(request.url || "", "http://localhost");
     const sessionId = url.pathname.match(/^\/api\/ws\/terminal\/(.+)$/)?.[1];
 
@@ -42,7 +42,9 @@ export function setupWebSocket(server: Server) {
     wss.handleUpgrade(request, socket, head, (ws) => {
       wss.emit("connection", ws, { sessionId });
     });
-  });
+  };
+
+  server.on("upgrade", upgradeHandler);
 
   const connections = new Map<any, { sessionId: string; alive: boolean }>();
 
@@ -101,7 +103,7 @@ export function setupWebSocket(server: Server) {
     });
   });
 
-  setInterval(() => {
+  const heartbeatInterval = setInterval(() => {
     for (const [ws, entry] of connections.entries()) {
       if (ws.readyState !== 1) {
         connections.delete(ws);
@@ -119,4 +121,19 @@ export function setupWebSocket(server: Server) {
   }, 30000);
 
   logger.info("WebSocket server mounted at /api/ws/terminal");
+
+  return {
+    close() {
+      clearInterval(heartbeatInterval);
+      server.off("upgrade", upgradeHandler);
+      for (const ws of connections.keys()) {
+        try {
+          ws.close();
+        } catch {}
+      }
+      connections.clear();
+      buffers.clear();
+      wss.close();
+    },
+  };
 }

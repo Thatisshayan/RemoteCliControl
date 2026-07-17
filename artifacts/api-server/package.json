@@ -10,10 +10,13 @@
     "start:3000": "node -e \"process.env.PORT=3000;import('./dist/index.mjs')\"",
     "start:tray": "tsx src/tray.ts",
     "bundle:exe": "npx @yao-pkg/pkg dist/tray.mjs --targets node20-win-x64 --out-path release/",
+    "typecheck": "tsc --noEmit",
+    "lint": "pnpm run typecheck",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@remotectrl/api-zod": "workspace:*",
     "cors": "^2.8.5",
     "expo-server-sdk": "^6.1.0",
     "node-windows": "1.0.0-beta.8",

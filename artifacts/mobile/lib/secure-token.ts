@@ -31,3 +31,8 @@ export async function getStoredApiToken(): Promise<string | null> {
 export async function setStoredApiToken(token: string): Promise<void> {
   await SecureStore.setItemAsync(KEY, token);
 }
+
+export async function clearStoredApiToken(): Promise<void> {
+  await SecureStore.deleteItemAsync(KEY);
+  await AsyncStorage.removeItem(KEY);
+}

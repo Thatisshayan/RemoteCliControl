@@ -1,77 +1,84 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Switch, Alert, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
-import { setBaseUrl, setApiToken, getBaseUrl } from "@remotectrl/api-client-react";
+import { HealthResponseSchema, TunnelStatusResponseSchema } from "@remotectrl/api-zod";
+import { publicApi } from "@remotectrl/api-client-react";
 import { colors } from "../../constants/colors";
-import { getStoredApiToken, setStoredApiToken } from "../../lib/secure-token";
+import { useRuntimeConfig } from "../../lib/runtime-config";
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const [serverUrl, setServerUrl] = useState("");
-  const [apiToken, setApiTokenState] = useState("");
+  const {
+    baseUrl,
+    apiToken,
+    saveBaseUrl,
+    saveApiToken,
+    clearLocalState,
+  } = useRuntimeConfig();
+  const [serverUrl, setServerUrl] = useState(baseUrl);
+  const [tokenInput, setTokenInput] = useState(apiToken);
   const [showToken, setShowToken] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [fontSize, setFontSizeState] = useState(12);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
-  const [health, setHealth] = useState<{ tunnelUrl?: string; uptimeSeconds?: number; activeSessions?: number } | null>(null);
-  const [pushPerms, setPushPerms] = useState<{ sessionDisconnected: boolean; serverHealthChange: boolean } | null>(null);
-
-  const fetchHealth = useCallback(async () => {
-    try {
-      const base = getBaseUrl();
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
-      const res = await fetch(`${base}/health`, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      if (res.ok) setHealth(await res.json());
-    } catch (err: any) {
-      console.warn("Failed to fetch health:", err?.message);
-    }
-  }, []);
-
-  const fetchPushPreferences = useCallback(async () => {
-    try {
-      const base = getBaseUrl();
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
-      const res = await fetch(`${base}/api/push/preferences`, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      if (res.ok) setPushPerms(await res.json());
-    } catch (err: any) {
-      console.warn("Failed to fetch push preferences:", err?.message);
-    }
-  }, []);
+  const [health, setHealth] = useState<ReturnType<typeof HealthResponseSchema.parse> | null>(null);
+  const [tunnelStatus, setTunnelStatus] = useState<ReturnType<typeof TunnelStatusResponseSchema.parse> | null>(null);
 
   useEffect(() => {
-    AsyncStorage.multiGet(["server-url", "biometric-lock", "terminal-font-size"]).then((values) => {
+    setServerUrl(baseUrl);
+  }, [baseUrl]);
+
+  useEffect(() => {
+    setTokenInput(apiToken);
+  }, [apiToken]);
+
+  useEffect(() => {
+    AsyncStorage.multiGet(["biometric-lock", "terminal-font-size"]).then((values) => {
       for (const [key, val] of values) {
-        if (key === "server-url" && val) setServerUrl(val);
         if (key === "terminal-font-size" && val) setFontSizeState(Number(val));
         if (key === "biometric-lock") setBiometricEnabled(val === "true");
       }
     });
-    getStoredApiToken().then((val) => {
-      if (val) setApiTokenState(val);
-    });
-    fetchHealth();
-    fetchPushPreferences();
-    const interval = setInterval(fetchHealth, 30_000);
-    return () => clearInterval(interval);
-  }, [fetchHealth, fetchPushPreferences]);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const refreshStatus = async () => {
+      try {
+        const [healthResponse, tunnelResponse] = await Promise.all([
+          publicApi.get("/health", undefined, HealthResponseSchema),
+          publicApi.get("/tunnel-url", undefined, TunnelStatusResponseSchema),
+        ]);
+        if (!active) return;
+        setHealth(healthResponse);
+        setTunnelStatus(tunnelResponse);
+      } catch {
+        if (!active) return;
+        setHealth(null);
+        setTunnelStatus(null);
+      }
+    };
+    refreshStatus().catch(() => {});
+    const interval = setInterval(() => {
+      refreshStatus().catch(() => {});
+    }, 30_000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [baseUrl]);
 
   const handleSaveUrl = async () => {
     const url = serverUrl.replace(/\/+$/, "");
-    await AsyncStorage.setItem("server-url", url);
-    setBaseUrl(url);
+    await saveBaseUrl(url);
     Alert.alert("Saved", "Server URL updated");
   };
 
   const handleSaveToken = async () => {
-    await setStoredApiToken(apiToken);
-    setApiToken(apiToken);
+    await saveApiToken(tokenInput);
     Alert.alert("Saved", "API token updated");
   };
 
@@ -79,11 +86,12 @@ export default function SettingsScreen() {
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await fetch(`${serverUrl.replace(/\/+$/, "")}/health`, { signal: AbortSignal.timeout(5000) });
-      if (res.ok) {
+      const base = serverUrl.replace(/\/+$/, "");
+      const response = await fetch(`${base}/health`, { signal: AbortSignal.timeout(5000) });
+      if (response.ok) {
         setTestResult("Connection successful");
       } else {
-        setTestResult(`Server returned ${res.status}`);
+        setTestResult(`Server returned ${response.status}`);
       }
     } catch (err: any) {
       setTestResult(err?.message || "Connection failed");
@@ -92,47 +100,34 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleBiometricToggle = async (val: boolean) => {
-    setBiometricEnabled(val);
-    await AsyncStorage.setItem("biometric-lock", val ? "true" : "false");
+  const handleBiometricToggle = async (value: boolean) => {
+    setBiometricEnabled(value);
+    await AsyncStorage.setItem("biometric-lock", value ? "true" : "false");
   };
 
-  const handleFontSizeChange = async (val: number) => {
-    const clamped = Math.max(8, Math.min(20, val));
+  const handleFontSizeChange = async (value: number) => {
+    const clamped = Math.max(8, Math.min(20, value));
     setFontSizeState(clamped);
     await AsyncStorage.setItem("terminal-font-size", String(clamped));
-  };
-
-  const handlePushPreferenceToggle = async (key: "sessionDisconnected" | "serverHealthChange", val: boolean) => {
-    setPushPerms((prev) => prev ? { ...prev, [key]: val } : { sessionDisconnected: true, serverHealthChange: true });
-    try {
-      const base = getBaseUrl();
-      await fetch(`${base}/api/push/preferences`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [key]: val }),
-      });
-    } catch (err: any) {
-      console.warn("Failed to update push preference:", err?.message);
-    }
   };
 
   const handleClearData = () => {
     Alert.alert("Clear Local Data", "This will reset all settings and sign you out.", [
       { text: "Cancel", style: "cancel" },
       {
-        text: "Clear", style: "destructive",
+        text: "Clear",
+        style: "destructive",
         onPress: async () => {
-          await AsyncStorage.clear();
+          await clearLocalState();
           router.replace("/onboarding");
         },
       },
     ]);
   };
 
-  const tunnelUrl = health?.tunnelUrl as string | undefined;
-  const uptime = health?.uptimeSeconds as number | undefined;
-  const activeSessions = health?.activeSessions as number | undefined;
+  const uptime = health?.uptimeSeconds;
+  const activeSessions = health?.activeSessions;
+  const tunnelUrl = tunnelStatus?.tunnelUrl;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -170,8 +165,8 @@ export default function SettingsScreen() {
         <View style={styles.inputRow}>
           <TextInput
             style={[styles.input, { flex: 1 }]}
-            value={apiToken}
-            onChangeText={setApiTokenState}
+            value={tokenInput}
+            onChangeText={setTokenInput}
             placeholder="Bearer token"
             placeholderTextColor={colors.mutedForeground}
             secureTextEntry={!showToken}
@@ -190,13 +185,15 @@ export default function SettingsScreen() {
         <Text style={styles.sectionTitle}>Remote Access</Text>
         <View style={styles.statusCard}>
           <View style={styles.statusRow}>
-            <View style={[styles.statusDot, { backgroundColor: tunnelUrl ? colors.primary : colors.mutedForeground }]} />
-            <Text style={styles.statusLabel}>{tunnelUrl ? "Connected" : "Inactive"}</Text>
+            <View style={[styles.statusDot, { backgroundColor: tunnelStatus?.active ? colors.primary : colors.mutedForeground }]} />
+            <Text style={styles.statusLabel}>{tunnelStatus?.active ? "Connected" : "Inactive"}</Text>
           </View>
-          {tunnelUrl && (
+          {tunnelUrl ? (
             <TouchableOpacity onPress={() => Alert.alert("Tunnel URL", tunnelUrl)}>
               <Text style={styles.tunnelUrl} numberOfLines={1}>{tunnelUrl}</Text>
             </TouchableOpacity>
+          ) : (
+            <Text style={styles.helperText}>Cloudflare Tunnel is not active on this server.</Text>
           )}
         </View>
       </View>
@@ -204,7 +201,7 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Security</Text>
         <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>Biometric Lock (Face ID / Touch ID)</Text>
+          <Text style={styles.toggleLabel}>Biometric Lock (stored preference only)</Text>
           <Switch
             value={biometricEnabled}
             onValueChange={handleBiometricToggle}
@@ -217,24 +214,9 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Push Notifications</Text>
         <View style={styles.serverCard}>
-          <View style={styles.serverRow}>
-            <Text style={styles.serverLabel}>Session Disconnected</Text>
-            <Switch
-              value={pushPerms?.sessionDisconnected ?? true}
-              onValueChange={(v) => handlePushPreferenceToggle("sessionDisconnected", v)}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.foreground}
-            />
-          </View>
-          <View style={styles.serverRow}>
-            <Text style={styles.serverLabel}>Server Health Changes</Text>
-            <Switch
-              value={pushPerms?.serverHealthChange ?? true}
-              onValueChange={(v) => handlePushPreferenceToggle("serverHealthChange", v)}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.foreground}
-            />
-          </View>
+          <Text style={styles.helperText}>
+            Push notifications are unavailable in the current stabilization build and are intentionally hidden from active use.
+          </Text>
         </View>
       </View>
 
@@ -277,6 +259,12 @@ export default function SettingsScreen() {
               <Text style={styles.serverValue}>{activeSessions}</Text>
             </View>
           )}
+          {health?.version && (
+            <View style={styles.serverRow}>
+              <Text style={styles.serverLabel}>Server Version</Text>
+              <Text style={styles.serverValue}>{health.version}</Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -285,7 +273,7 @@ export default function SettingsScreen() {
         <View style={styles.aboutCard}>
           <View style={styles.serverRow}>
             <Text style={styles.serverLabel}>App Version</Text>
-            <Text style={styles.serverValue}>{"1.0.0"}</Text>
+            <Text style={styles.serverValue}>1.0.0</Text>
           </View>
         </View>
         <TouchableOpacity style={styles.destructiveBtn} onPress={handleClearData}>
@@ -320,6 +308,7 @@ const styles = StyleSheet.create({
   statusDot: { width: 10, height: 10, borderRadius: 5 },
   statusLabel: { color: colors.foreground, fontSize: 15, fontFamily: "Inter_500Medium" },
   tunnelUrl: { color: colors.primary, fontSize: 13, fontFamily: "Inter_400Regular" },
+  helperText: { color: colors.mutedForeground, fontSize: 13, lineHeight: 18, fontFamily: "Inter_400Regular" },
   toggleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.card, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: colors.border },
   toggleLabel: { color: colors.foreground, fontSize: 15, flex: 1, fontFamily: "Inter_400Regular" },
   sliderRow: { flexDirection: "row", alignItems: "center", gap: 12 },

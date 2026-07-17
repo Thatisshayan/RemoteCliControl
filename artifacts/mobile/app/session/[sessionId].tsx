@@ -4,10 +4,9 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import * as KeepAwake from "expo-keep-awake";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { buildWebSocketUrl, getApiToken } from "@remotectrl/api-client-react";
 import { colors } from "../../constants/colors";
-
-const DOMAIN_RAW = process.env.EXPO_PUBLIC_DOMAIN || "http://localhost:3000";
-const DOMAIN = DOMAIN_RAW.replace(/^https?:\/\//, "");
+import { useRuntimeConfig } from "../../lib/runtime-config";
 
 const ANSI_COLORS: Record<number, string> = {
   30: "#4d4d4d", 31: "#ff4444", 32: "#00ff88", 33: "#ffaa00",
@@ -70,6 +69,7 @@ function sanitizeCommand(cmd: string): string {
 
 export default function SessionScreen() {
   const router = useRouter();
+  const { baseUrl, apiToken } = useRuntimeConfig();
   const { sessionId: rawSessionId, prefill } = useLocalSearchParams<{ sessionId: string; prefill?: string }>();
   const [lines, setLines] = useState<string[]>([]);
   const [input, setInput] = useState("");
@@ -119,15 +119,12 @@ export default function SessionScreen() {
     if (!sessionId || isReconnecting.current) return;
     isReconnecting.current = true;
 
-    const isHttps = DOMAIN_RAW.startsWith("https");
-    const protocol = isHttps ? "wss:" : "ws:";
-    const url = `${protocol}//${DOMAIN}/api/ws/terminal/${sessionId}`;
-    const token = (globalThis as any).EXPO_PUBLIC_API_TOKEN as string | undefined;
-    const urlWithToken = token ? `${url}?token=${encodeURIComponent(token)}` : url;
+    const url = buildWebSocketUrl(`/api/ws/terminal/${sessionId}`);
+    const token = apiToken || getApiToken();
 
     let ws: WebSocket;
     try {
-      ws = new WebSocket(urlWithToken);
+      ws = token ? new WebSocket(url, [token]) : new WebSocket(url);
     } catch (err) {
       isReconnecting.current = false;
       setReconnectStatus("Failed to create WebSocket connection");
@@ -178,7 +175,7 @@ export default function SessionScreen() {
       isReconnecting.current = false;
       ws.close();
     };
-  }, [sessionId]);
+  }, [apiToken, baseUrl, sessionId]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -196,7 +193,7 @@ export default function SessionScreen() {
       wsRef.current = null;
       isReconnecting.current = false;
     };
-  }, [sessionId]);
+  }, [openWs, sessionId]);
 
   const sendInput = (text?: string) => {
     const cmd = text ?? input;

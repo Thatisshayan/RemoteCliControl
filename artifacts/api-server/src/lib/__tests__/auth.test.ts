@@ -39,7 +39,7 @@ describe("auth.ts middleware", () => {
     authMiddleware(mockReq as any, mockRes as any, mockNext);
     
     expect(mockRes.status).toHaveBeenCalledWith(401);
-    expect(mockRes.json).toHaveBeenCalledWith({ error: "Missing Authorization header" });
+    expect(mockRes.json).toHaveBeenCalledWith({ error: "Missing Authorization header", code: "AUTH_REQUIRED" });
     expect(mockNext).not.toHaveBeenCalled();
   });
 
@@ -52,7 +52,7 @@ describe("auth.ts middleware", () => {
     authMiddleware(mockReq as any, mockRes as any, mockNext);
     
     expect(mockRes.status).toHaveBeenCalledWith(401);
-    expect(mockRes.json).toHaveBeenCalledWith({ error: "Invalid API token" });
+    expect(mockRes.json).toHaveBeenCalledWith({ error: "Invalid API token", code: "AUTH_INVALID" });
     expect(mockNext).not.toHaveBeenCalled();
   });
 
