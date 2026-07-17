@@ -4,9 +4,10 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import * as KeepAwake from "expo-keep-awake";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { buildWebSocketUrl, getApiToken } from "@remotectrl/api-client-react";
+import { getApiToken } from "@remotectrl/api-client-react";
 import { colors } from "../../constants/colors";
 import { useRuntimeConfig } from "../../lib/runtime-config";
+import { buildTerminalSocketArgs, sanitizeSessionId } from "../../lib/terminal-ws";
 
 const ANSI_COLORS: Record<number, string> = {
   30: "#4d4d4d", 31: "#ff4444", 32: "#00ff88", 33: "#ffaa00",
@@ -41,12 +42,6 @@ function parseAnsi(text: string): AnsiSegment[] {
     segments.push({ text: text.slice(lastIndex), color: currentColor, bold: currentBold });
   }
   return segments.length ? segments : [{ text, color: colors.primary }];
-}
-
-function sanitizeSessionId(id: string | null): string | null {
-  if (!id) return null;
-  const sanitized = id.replace(/[^a-zA-Z0-9_-]/g, '');
-  return sanitized.length > 0 ? sanitized : null;
 }
 
 const MAX_HISTORY = 100;
@@ -119,12 +114,12 @@ export default function SessionScreen() {
     if (!sessionId || isReconnecting.current) return;
     isReconnecting.current = true;
 
-    const url = buildWebSocketUrl(`/api/ws/terminal/${sessionId}`);
     const token = apiToken || getApiToken();
+    const { url, protocols } = buildTerminalSocketArgs(sessionId, token);
 
     let ws: WebSocket;
     try {
-      ws = token ? new WebSocket(url, [token]) : new WebSocket(url);
+      ws = protocols.length > 0 ? new WebSocket(url, protocols) : new WebSocket(url);
     } catch (err) {
       isReconnecting.current = false;
       setReconnectStatus("Failed to create WebSocket connection");

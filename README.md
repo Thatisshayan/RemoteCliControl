@@ -160,7 +160,12 @@ included in `pnpm test` and CI's `test-mobile` job) using `jest-expo` and
 covers config hydration from `AsyncStorage`/`expo-secure-store` and live
 backend URL/token switching, asserting the shared HTTP client
 (`@remotectrl/api-client-react`) is actually repointed, not just local
-component state. As of this pass: 1 test file, 9 tests, all passing.
+component state.
+`artifacts/mobile/lib/__tests__/terminal-ws.test.ts` covers the terminal
+WebSocket URL/subprotocol construction extracted into
+`artifacts/mobile/lib/terminal-ws.ts` — the API token is carried as the sole
+WebSocket subprotocol only when present. As of this pass: 2 test files, 18
+tests, all passing.
 
 ## Key Docs
 
