@@ -2,6 +2,13 @@ name: iOS TestFlight
 
 on:
   workflow_dispatch:
+    inputs:
+      lane:
+        description: 'Fastlane lane to run'
+        required: true
+        default: 'beta'
+        type: choice
+        options: [beta, bootstrap_certs]
   push:
     tags:
       - "ios-v*"
@@ -43,12 +50,11 @@ jobs:
           bundler-cache: true
           working-directory: ios
 
-      - name: Build and upload to TestFlight
+      - name: Run fastlane
         working-directory: ios
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          MATCH_READONLY: "true"
-        run: bundle exec fastlane beta
+        run: bundle exec fastlane ${{ github.event.inputs.lane || 'beta' }}
