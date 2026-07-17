@@ -172,7 +172,7 @@ manual logs in `files.ts`/`processes.ts`/`push.ts` — goes through `req.log`
 `MOBILE_MIN_VERSION` server env var (unset by default). See
 `artifacts/api-server/src/routes/__tests__/version.test.ts`.
 
-As of this pass: 17 test files, 128 tests, all passing.
+As of this pass: 18 test files, 134 tests, all passing.
 
 The mobile app has its own Jest suite (`pnpm --filter @remotectrl/mobile test`,
 included in `pnpm test` and CI's `test-mobile` job) using `jest-expo` and

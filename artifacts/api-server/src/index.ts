@@ -4,6 +4,7 @@ import { listSessions, closeSession } from "./lib/sshManager.js";
 import { startTunnel, stopTunnel } from "./lib/tunnel.js";
 import logger from "./lib/logger.js";
 import { notifyServerStarted } from "./lib/pushNotifications.js";
+import { buildStartupSummary, formatStartupSummary } from "./lib/startupSummary.js";
 import packageJson from "../package.json" with { type: "json" };
 
 const PORT = process.env.PORT;
@@ -38,16 +39,33 @@ const server = app.listen(Number(PORT), async () => {
     logger.warn({ err }, "Failed to send startup push notification");
   });
 
+  let tunnelUrl: string | null = null;
+  let tunnelError: string | null = null;
   if (tunnelEnabled) {
     try {
-      const url = await startTunnel(Number(PORT));
-      if (url) {
-        logger.info({ tunnelUrl: url }, "Cloudflare Tunnel active");
+      tunnelUrl = (await startTunnel(Number(PORT))) ?? null;
+      if (tunnelUrl) {
+        logger.info({ tunnelUrl }, "Cloudflare Tunnel active");
       }
     } catch (err) {
+      tunnelError = err instanceof Error ? err.message : String(err);
       logger.error({ err }, "Failed to start Cloudflare Tunnel");
     }
   }
+
+  const summary = buildStartupSummary({
+    port: Number(PORT),
+    version: packageJson.version,
+    nodeVersion: process.version,
+    pid: process.pid,
+    authMode: API_TOKEN ? "token" : "none",
+    tunnelEnabled,
+    tunnelUrl,
+    tunnelError,
+  });
+  // eslint-disable-next-line no-console -- deliberate human-readable block,
+  // distinct from the structured pino lines above; not meant to be parsed.
+  console.log(formatStartupSummary(summary));
 });
 
 function shutdown() {
