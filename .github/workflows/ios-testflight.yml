@@ -43,16 +43,20 @@ jobs:
         working-directory: ./artifacts/mobile
         run: npx expo prebuild --platform ios --no-install --clean
 
-      - name: Move generated ios project into place
+      - name: Copy fastlane config into the generated iOS project
         run: |
-          rsync -a artifacts/mobile/ios/ ios/
-          rm -rf artifacts/mobile/ios
+          cp ios/Gemfile artifacts/mobile/ios/Gemfile
+          cp -r ios/fastlane artifacts/mobile/ios/fastlane
 
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
           bundler-cache: true
-          working-directory: ios
+          working-directory: artifacts/mobile/ios
+
+      - name: Install CocoaPods dependencies
+        working-directory: artifacts/mobile/ios
+        run: pod install
 
       - name: Derive match git auth from the workflow token
         id: match_auth
@@ -62,7 +66,7 @@ jobs:
           echo "auth=$AUTH" >> "$GITHUB_OUTPUT"
 
       - name: Run fastlane
-        working-directory: ios
+        working-directory: artifacts/mobile/ios
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
