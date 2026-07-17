@@ -151,8 +151,15 @@ SSH/SFTP mocked only at the `sshManager` boundary.
 The suite also includes a contract-drift guard
 (`artifacts/api-server/src/__tests__/contract-snapshot.test.ts`) that checks
 `lib/api-spec/openapi.yaml` against the shared zod schemas and against the
-live route table, since nothing generates one from the other. As of this
-pass: 14 test files, 102 tests, all passing.
+live route table, since nothing generates one from the other.
+
+`sshManager.ts`'s `execCommand` keeps PowerShell's stdout and stderr
+separate (`{ stdout, stderr, exitCode }`) rather than merging them, so
+`GET /api/processes`'s `ConvertTo-Json` parsing can't be broken by unrelated
+warnings on stderr, and `DELETE /api/processes/:pid` checks the exit code
+instead of always reporting success. See
+`artifacts/api-server/src/routes/__tests__/processes.test.ts`. As of this
+pass: 14 test files, 106 tests, all passing.
 
 The mobile app has its own Jest suite (`pnpm --filter @remotectrl/mobile test`,
 included in `pnpm test` and CI's `test-mobile` job) using `jest-expo` and

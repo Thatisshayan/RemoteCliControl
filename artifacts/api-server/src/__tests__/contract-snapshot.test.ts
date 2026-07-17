@@ -59,7 +59,7 @@ vi.mock("../lib/sshManager.js", () => ({
   markUserInitiatedClose: vi.fn(),
   testConnection: vi.fn(),
   getSftp: vi.fn(),
-  execCommand: vi.fn(async () => "[]"),
+  execCommand: vi.fn(async () => ({ stdout: "[]", stderr: "", exitCode: 0 })),
 }));
 
 // This file guards against contract drift between `lib/api-spec/openapi.yaml`

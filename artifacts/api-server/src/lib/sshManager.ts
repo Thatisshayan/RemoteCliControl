@@ -232,18 +232,35 @@ export function addOutputListener(id: string, fn: (data: string) => void): () =>
   return () => { session.listeners.delete(fn); };
 }
 
-export async function execCommand(command: string): Promise<string> {
+export interface ExecResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number | null;
+}
+
+export async function execCommand(command: string): Promise<ExecResult> {
   const cfg = getActiveConnection();
   if (!cfg) throw new Error("No connection configured");
 
   const client = await acquireUtilityClient();
-  return new Promise<string>((resolve, reject) => {
-    const chunks: Buffer[] = [];
+  return new Promise<ExecResult>((resolve, reject) => {
+    const stdoutChunks: Buffer[] = [];
+    const stderrChunks: Buffer[] = [];
     client.exec(command, (err: any, stream: any) => {
       if (err) { reject(err); return; }
-      stream.on("data", (data: Buffer) => chunks.push(data));
-      stream.stderr.on("data", (data: Buffer) => chunks.push(data));
-      stream.on("close", () => resolve(Buffer.concat(chunks).toString("utf8")));
+      // stdout and stderr are kept separate (not merged into one buffer) so
+      // callers that parse machine-readable stdout (e.g. ConvertTo-Json)
+      // aren't broken by unrelated PowerShell warnings/errors landing on
+      // stderr and getting interleaved with it.
+      stream.on("data", (data: Buffer) => stdoutChunks.push(data));
+      stream.stderr.on("data", (data: Buffer) => stderrChunks.push(data));
+      stream.on("close", (code: number | null) => {
+        resolve({
+          stdout: Buffer.concat(stdoutChunks).toString("utf8"),
+          stderr: Buffer.concat(stderrChunks).toString("utf8"),
+          exitCode: typeof code === "number" ? code : null,
+        });
+      });
     });
   });
 }
