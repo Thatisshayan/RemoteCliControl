@@ -21,12 +21,20 @@ router.post("/connection", (req, res, next) => {
     const existing = getActiveConnection();
     if (existing) {
       removeConnection(existing.id);
+      req.log.info(
+        { connectionId: existing.id, host: existing.host },
+        "Connection audit: legacy connection replaced",
+      );
     }
     const profile = addConnection({
       name: existing?.name || "Default",
       ...input,
     });
     setActiveConnection(profile.id);
+    req.log.info(
+      { connectionId: profile.id, host: profile.host, username: profile.username, authMode: profile.authMode },
+      "Connection audit: connection created and activated",
+    );
     res.json(getActiveConnectionSafe());
   } catch (err) {
     next(err);
@@ -65,6 +73,10 @@ router.post("/connections", (req, res, next) => {
   try {
     const input = parseBody(NamedConnectionInputSchema, req);
     const profile = addConnection(input);
+    req.log.info(
+      { connectionId: profile.id, name: profile.name, host: profile.host, username: profile.username, authMode: profile.authMode },
+      "Connection audit: profile created",
+    );
     res.status(201).json(getConnectionsSafe().find((connection) => connection.id === profile.id));
   } catch (err) {
     next(err);
@@ -72,8 +84,13 @@ router.post("/connections", (req, res, next) => {
 });
 
 router.delete("/connections/:id", (req, res) => {
+  const existing = getConnectionById(req.params.id);
   const ok = removeConnection(req.params.id);
   if (!ok) return sendError(res, 404, "PROFILE_NOT_FOUND", "Profile not found");
+  req.log.info(
+    { connectionId: req.params.id, name: existing?.name, host: existing?.host },
+    "Connection audit: profile deleted",
+  );
   res.json({ success: true });
 });
 
@@ -81,6 +98,10 @@ router.post("/connections/:id/activate", (req, res) => {
   const profile = getConnectionById(req.params.id);
   if (!profile) return sendError(res, 404, "PROFILE_NOT_FOUND", "Profile not found");
   setActiveConnection(req.params.id);
+  req.log.info(
+    { connectionId: profile.id, name: profile.name, host: profile.host },
+    "Connection audit: profile activated",
+  );
   res.json({ success: true });
 });
 
