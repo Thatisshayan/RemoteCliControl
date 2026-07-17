@@ -27,6 +27,8 @@ pnpm lint
 
 If `pnpm` tries to touch the registry in a restricted environment, use the local TypeScript/Vitest binaries directly.
 
+`pnpm test` runs the API server's Vitest suite, then the mobile app's Jest suite (`jest-expo` + `@testing-library/react-native`). Mobile's `artifacts/mobile/jest.config.js` overrides `transformIgnorePatterns` to handle pnpm's nested `.pnpm/pkg@version/node_modules/...` store layout, which the `jest-expo` preset's default pattern (written for a flat node_modules layout) doesn't match — see the comment in that file before changing it.
+
 ## Contract Changes
 
 If you change a request/response shape:

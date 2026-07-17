@@ -154,6 +154,14 @@ The suite also includes a contract-drift guard
 live route table, since nothing generates one from the other. As of this
 pass: 14 test files, 102 tests, all passing.
 
+The mobile app has its own Jest suite (`pnpm --filter @remotectrl/mobile test`,
+included in `pnpm test` and CI's `test-mobile` job) using `jest-expo` and
+`@testing-library/react-native`. `artifacts/mobile/lib/__tests__/runtime-config.test.tsx`
+covers config hydration from `AsyncStorage`/`expo-secure-store` and live
+backend URL/token switching, asserting the shared HTTP client
+(`@remotectrl/api-client-react`) is actually repointed, not just local
+component state. As of this pass: 1 test file, 9 tests, all passing.
+
 ## Key Docs
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
