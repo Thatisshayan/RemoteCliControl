@@ -7,6 +7,7 @@ import { HealthResponseSchema, TunnelStatusResponseSchema } from "@remotectrl/ap
 import { publicApi } from "@remotectrl/api-client-react";
 import { colors } from "../../constants/colors";
 import { useRuntimeConfig } from "../../lib/runtime-config";
+import { checkConnection } from "../../lib/connection-check";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function SettingsScreen() {
   const [fontSize, setFontSizeState] = useState(12);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
+  const [testSucceeded, setTestSucceeded] = useState(false);
   const [health, setHealth] = useState<ReturnType<typeof HealthResponseSchema.parse> | null>(null);
   const [tunnelStatus, setTunnelStatus] = useState<ReturnType<typeof TunnelStatusResponseSchema.parse> | null>(null);
 
@@ -85,19 +87,13 @@ export default function SettingsScreen() {
   const handleTestConnection = async () => {
     setTesting(true);
     setTestResult(null);
-    try {
-      const base = serverUrl.replace(/\/+$/, "");
-      const response = await fetch(`${base}/health`, { signal: AbortSignal.timeout(5000) });
-      if (response.ok) {
-        setTestResult("Connection successful");
-      } else {
-        setTestResult(`Server returned ${response.status}`);
-      }
-    } catch (err: any) {
-      setTestResult(err?.message || "Connection failed");
-    } finally {
-      setTesting(false);
-    }
+    // Validates both the URL (server reachable) and the token (accepted by
+    // an authenticated route) so a bad token is caught here instead of on
+    // the first real screen that needs it.
+    const result = await checkConnection(serverUrl, tokenInput);
+    setTestResult(result.message);
+    setTestSucceeded(result.ok);
+    setTesting(false);
   };
 
   const handleBiometricToggle = async (value: boolean) => {
@@ -156,7 +152,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
         {testResult && (
-          <Text style={[styles.resultText, testResult === "Connection successful" ? styles.successText : styles.errorText]}>
+          <Text style={[styles.resultText, testSucceeded ? styles.successText : styles.errorText]}>
             {testResult}
           </Text>
         )}

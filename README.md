@@ -172,6 +172,12 @@ CI's `windows-workspace` job runs `pnpm typecheck`, `pnpm test`, and
 tagged releases — so the actual workspace script layer (not only the
 `ubuntu-latest` jobs) is proven on Windows continuously.
 
+`artifacts/mobile/lib/__tests__/connection-check.test.ts` covers
+`checkConnection`, which onboarding and Settings both use to validate a
+server URL and API token together — checking `/health` for reachability,
+then a real authenticated route (`/api/connection`) so a rejected token is
+caught immediately instead of on the first live screen that needs it.
+
 ## Key Docs
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
