@@ -81,7 +81,10 @@ vi.mock("../lib/sshManager.js", () => ({
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OPENAPI_PATH = path.resolve(__dirname, "../../../../lib/api-spec/openapi.yaml");
-const yamlText = fs.readFileSync(OPENAPI_PATH, "utf8");
+// Normalized to LF regardless of how git checked the file out (Windows
+// checkouts commonly convert to CRLF via core.autocrlf) — every parser below
+// searches for literal "\n"-delimited markers.
+const yamlText = fs.readFileSync(OPENAPI_PATH, "utf8").replace(/\r\n/g, "\n");
 
 interface RouteEntry {
   method: string;
