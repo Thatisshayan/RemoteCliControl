@@ -286,6 +286,10 @@ export default function SettingsScreen() {
             <Text style={styles.versionWarningText}>{versionCompat.message}</Text>
           </View>
         )}
+        <TouchableOpacity style={styles.secondaryBtn} onPress={() => router.push("/diagnostics")}>
+          <Text style={styles.secondaryBtnText}>View Diagnostics</Text>
+        </TouchableOpacity>
+        <View style={{ height: 8 }} />
         <TouchableOpacity style={styles.destructiveBtn} onPress={handleClearData}>
           <Text style={styles.destructiveBtnText}>Clear Local Data</Text>
         </TouchableOpacity>

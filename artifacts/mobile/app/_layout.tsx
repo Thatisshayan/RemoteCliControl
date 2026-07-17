@@ -102,6 +102,7 @@ function RootLayout() {
                     <Stack.Screen name="(tabs)" />
                     <Stack.Screen name="session/[sessionId]" options={{ presentation: "fullScreenModal" }} />
                     <Stack.Screen name="connection" options={{ presentation: "modal" }} />
+                    <Stack.Screen name="diagnostics" options={{ presentation: "modal" }} />
                   </Stack>
                   <StatusBar style="light" />
                 </QueryClientProvider>
