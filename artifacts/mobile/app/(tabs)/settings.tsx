@@ -2,12 +2,16 @@ import { useEffect, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Switch, Alert, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 import { Feather } from "@expo/vector-icons";
-import { HealthResponseSchema, TunnelStatusResponseSchema } from "@remotectrl/api-zod";
+import { HealthResponseSchema, TunnelStatusResponseSchema, VersionResponseSchema } from "@remotectrl/api-zod";
 import { publicApi } from "@remotectrl/api-client-react";
 import { colors } from "../../constants/colors";
 import { useRuntimeConfig } from "../../lib/runtime-config";
 import { checkConnection } from "../../lib/connection-check";
+import { getVersionCompatibility } from "../../lib/version-compat";
+
+const APP_VERSION = Constants.expoConfig?.version ?? "unknown";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -30,6 +34,7 @@ export default function SettingsScreen() {
   const [testSucceeded, setTestSucceeded] = useState(false);
   const [health, setHealth] = useState<ReturnType<typeof HealthResponseSchema.parse> | null>(null);
   const [tunnelStatus, setTunnelStatus] = useState<ReturnType<typeof TunnelStatusResponseSchema.parse> | null>(null);
+  const [mobileMinVersion, setMobileMinVersion] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     setServerUrl(baseUrl);
@@ -52,17 +57,20 @@ export default function SettingsScreen() {
     let active = true;
     const refreshStatus = async () => {
       try {
-        const [healthResponse, tunnelResponse] = await Promise.all([
+        const [healthResponse, tunnelResponse, versionResponse] = await Promise.all([
           publicApi.get("/health", undefined, HealthResponseSchema),
           publicApi.get("/tunnel-url", undefined, TunnelStatusResponseSchema),
+          publicApi.get("/version", undefined, VersionResponseSchema).catch(() => null),
         ]);
         if (!active) return;
         setHealth(healthResponse);
         setTunnelStatus(tunnelResponse);
+        setMobileMinVersion(versionResponse?.mobileMinVersion);
       } catch {
         if (!active) return;
         setHealth(null);
         setTunnelStatus(null);
+        setMobileMinVersion(undefined);
       }
     };
     refreshStatus().catch(() => {});
@@ -126,6 +134,7 @@ export default function SettingsScreen() {
   const uptime = health?.uptimeSeconds;
   const activeSessions = health?.activeSessions;
   const tunnelUrl = tunnelStatus?.tunnelUrl;
+  const versionCompat = getVersionCompatibility(APP_VERSION, mobileMinVersion);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -283,9 +292,21 @@ export default function SettingsScreen() {
         <View style={styles.aboutCard}>
           <View style={styles.serverRow}>
             <Text style={styles.serverLabel}>App Version</Text>
-            <Text style={styles.serverValue}>1.0.0</Text>
+            <Text style={styles.serverValue}>{APP_VERSION}</Text>
           </View>
+          {mobileMinVersion && (
+            <View style={styles.serverRow}>
+              <Text style={styles.serverLabel}>Server Min Version</Text>
+              <Text style={styles.serverValue}>{mobileMinVersion}</Text>
+            </View>
+          )}
         </View>
+        {versionCompat.status === "outdated" && (
+          <View style={styles.versionWarningBanner}>
+            <Feather name="alert-triangle" size={16} color={colors.destructive} />
+            <Text style={styles.versionWarningText}>{versionCompat.message}</Text>
+          </View>
+        )}
         <TouchableOpacity style={styles.destructiveBtn} onPress={handleClearData}>
           <Text style={styles.destructiveBtnText}>Clear Local Data</Text>
         </TouchableOpacity>
@@ -311,6 +332,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   authExpiredBannerText: { color: colors.destructive, fontSize: 13, fontFamily: "Inter_400Regular", flex: 1 },
+  versionWarningBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(255,68,68,0.1)",
+    borderWidth: 1,
+    borderColor: colors.destructive,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  versionWarningText: { color: colors.destructive, fontSize: 13, fontFamily: "Inter_400Regular", flex: 1 },
   section: { marginBottom: 28 },
   sectionTitle: { color: colors.foreground, fontSize: 16, fontWeight: "600", fontFamily: "Inter_600SemiBold", marginBottom: 12 },
   label: { color: colors.mutedForeground, fontSize: 12, fontWeight: "600", fontFamily: "Inter_600SemiBold", marginBottom: 6, marginTop: 12 },

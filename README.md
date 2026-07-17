@@ -36,6 +36,7 @@ On first launch, the mobile app asks for:
 | `API_TOKEN` | No | Enables bearer auth for `/api/*` and WebSocket terminal auth |
 | `CLOUDFLARE_TUNNEL` | No | When `true`, the server starts and owns the tunnel |
 | `TUNNEL_URL_PATH` | No | Override where the current tunnel URL is written |
+| `MOBILE_MIN_VERSION` | No | Oldest mobile app version (semver) this server supports; surfaced via `GET /version` for Settings' compatibility banner |
 
 ### Mobile
 
@@ -167,7 +168,11 @@ manual logs in `files.ts`/`processes.ts`/`push.ts` — goes through `req.log`
 (a pino child logger bound with that id) instead of the bare logger. See
 `artifacts/api-server/src/__tests__/request-id.test.ts`.
 
-As of this pass: 15 test files, 109 tests, all passing.
+`GET /version` optionally includes `mobileMinVersion`, sourced from a
+`MOBILE_MIN_VERSION` server env var (unset by default). See
+`artifacts/api-server/src/routes/__tests__/version.test.ts`.
+
+As of this pass: 16 test files, 111 tests, all passing.
 
 The mobile app has its own Jest suite (`pnpm --filter @remotectrl/mobile test`,
 included in `pnpm test` and CI's `test-mobile` job) using `jest-expo` and
@@ -189,8 +194,11 @@ included in `pnpm test` and CI's `test-mobile` job) using `jest-expo` and
   `AUTH_REQUIRED`/`AUTH_INVALID` from any react-query call and notifies
   `RuntimeConfigProvider`, which flips an `authExpired` flag the root layout
   uses to redirect to Settings.
+- `lib/__tests__/version-compat.test.ts` — `compareVersions`/
+  `getVersionCompatibility` (`lib/version-compat.ts`), the lenient
+  dotted-version comparison behind Settings' version-compatibility banner.
 
-As of this pass: 4 test files, 38 tests, all passing.
+As of this pass: 5 test files, 48 tests, all passing.
 
 CI's `windows-workspace` job runs `pnpm typecheck`, `pnpm test`, and
 `pnpm build:server` on `windows-latest` on every push/PR — not just on

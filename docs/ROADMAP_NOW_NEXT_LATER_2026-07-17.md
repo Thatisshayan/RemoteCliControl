@@ -127,7 +127,7 @@ Expected effect:
 
 These build operational confidence and user-facing resilience after the highest-risk coverage work lands.
 
-1. Add version compatibility messaging in Settings.
+1. ~~Add version compatibility messaging in Settings.~~ Done 2026-07-17: `GET /version` now optionally includes `mobileMinVersion`, sourced from a new `MOBILE_MIN_VERSION` server env var (unset by default, so no client is flagged unless an operator opts in) — added to the shared zod schema, `openapi.yaml`, and `.env.example`. Settings now fetches `/version` alongside `/health`/`/tunnel-url`, shows the running app version (previously hardcoded as `"1.0.0"` regardless of the actual build — a real pre-existing bug this surfaced) via `expo-constants`, and shows the server's declared minimum next to it when set. New `artifacts/mobile/lib/version-compat.ts` (`compareVersions`, `getVersionCompatibility`, 10 tests) does a lenient dotted-version comparison and renders a warning banner in Settings only when the running build is older than the server's declared minimum — purely informational, never blocking.
 2. Add explicit server-unreachable UX states and retry actions.
 3. Add session reconnect UX after backend restart.
 4. Add route-level tests for file rename validation and push preference validation failures.
@@ -158,7 +158,7 @@ These are valuable, but they should follow the current stabilization and observa
 7. Add rate limiting or throttle guards for high-frequency endpoints.
 8. Add backup/export for non-secret local app configuration.
 9. Expand deployment and recovery runbooks.
-10. Revisit iOS distribution strategy once the repo is stronger operationally.
+10. ~~Revisit iOS distribution strategy once the repo is stronger operationally.~~ Resolved early, 2026-07-17 (out of sequence — EAS Build usage was exhausted, forcing this sooner than planned): see [docs/IOS_TESTFLIGHT_CI_MANUAL.md](./IOS_TESTFLIGHT_CI_MANUAL.md) and the resolved entry in [docs/governance/DEFERRED_WORK.md](./governance/DEFERRED_WORK.md).
 
 Expected effect:
 

@@ -153,7 +153,7 @@ After onboarding, screens do not depend on `EXPO_PUBLIC_DOMAIN` for live routing
 Latest synced implementation verified on Friday, July 17, 2026:
 
 - all edited TypeScript package configs compile
-- API server Vitest suite passes (14 files, 102 tests), including:
+- API server Vitest suite passes (16 files, 111 tests), including:
   - an end-to-end happy-path smoke test that exercises the real Express app
     and WebSocket upgrade handler across connection, session, terminal, and
     files
