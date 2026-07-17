@@ -36,6 +36,7 @@ export default function FilesScreen() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<FileItem | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const { data, isLoading, refetch } = useListFiles(currentPath);
@@ -64,7 +65,7 @@ export default function FilesScreen() {
   };
 
   const handleDelete = async (item: FileItem) => {
-    setSelectedFile(null);
+    setDeleteTarget(null);
     try {
       await deleteFile.mutateAsync(item.path);
       refetch();
@@ -248,9 +249,23 @@ export default function FilesScreen() {
             ? [{ label: "Preview", icon: "eye" as const, onPress: () => { if (selectedFile) handlePreview(selectedFile); } }
             ] : []),
           { label: "Download", icon: "download" as const, onPress: () => { if (selectedFile) handleDownload(selectedFile); } },
-          { label: "Delete", icon: "trash-2" as const, destructive: true, onPress: () => { if (selectedFile) handleDelete(selectedFile); } },
+          { label: "Delete", icon: "trash-2" as const, destructive: true, onPress: () => { if (selectedFile) { setDeleteTarget(selectedFile); } } },
         ]}
         onCancel={() => setSelectedFile(null)}
+      />
+
+      <ActionSheet
+        visible={deleteTarget !== null}
+        title={deleteTarget?.type === "directory" ? "Delete Folder" : "Delete File"}
+        message={
+          deleteTarget
+            ? `Permanently delete "${deleteTarget.name}"${deleteTarget.type === "directory" ? " and everything inside it" : ""}? This cannot be undone.`
+            : ""
+        }
+        items={[
+          { label: "Delete", icon: "trash-2" as const, destructive: true, onPress: () => { if (deleteTarget) handleDelete(deleteTarget); } },
+        ]}
+        onCancel={() => setDeleteTarget(null)}
       />
 
       <Modal visible={previewLoading || previewContent !== null} animationType="slide" onRequestClose={() => { setPreviewContent(null); setPreviewName(null); }}>
