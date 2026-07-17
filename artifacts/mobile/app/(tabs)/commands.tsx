@@ -9,12 +9,12 @@ import Badge from "../../components/ui/Badge";
 import EmptyState from "../../components/ui/EmptyState";
 import ActionSheet from "../../components/ui/ActionSheet";
 import { colors } from "../../constants/colors";
-import { getErrorMessage } from "../../lib/error-message";
+import { getErrorMessage, isServerUnreachable } from "../../lib/error-message";
 import type { SavedCommand, Session } from "@remotectrl/api-zod";
 
 export default function CommandsScreen() {
   const router = useRouter();
-  const { data: commands } = useGetCommands();
+  const { data: commands, isError, error, refetch } = useGetCommands();
   const { data: sessions } = useGetSessions();
   const createCommand = useCreateCommand();
   const deleteCommand = useDeleteCommand();
@@ -65,6 +65,14 @@ export default function CommandsScreen() {
         <Text style={styles.headerTitle}>Commands</Text>
       </View>
 
+      {isError && isServerUnreachable(error) ? (
+        <EmptyState
+          icon="wifi-off"
+          message={getErrorMessage(error)}
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
+      ) : (
       <FlatList
         data={(commands || []) as SavedCommand[]}
         keyExtractor={(c) => c.id}
@@ -85,6 +93,7 @@ export default function CommandsScreen() {
         contentContainerStyle={styles.list}
         ListEmptyComponent={<EmptyState icon="list" message="No saved commands. Tap + to add one." />}
       />
+      )}
 
       <TouchableOpacity style={styles.fab} onPress={() => setShowModal(true)}>
         <Feather name="plus" size={24} color={colors.primaryForeground} />

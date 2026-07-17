@@ -4,12 +4,11 @@ import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { Feather } from "@expo/vector-icons";
-import { HealthResponseSchema, TunnelStatusResponseSchema, VersionResponseSchema } from "@remotectrl/api-zod";
-import { publicApi } from "@remotectrl/api-client-react";
 import { colors } from "../../constants/colors";
 import { useRuntimeConfig } from "../../lib/runtime-config";
 import { checkConnection } from "../../lib/connection-check";
 import { getVersionCompatibility } from "../../lib/version-compat";
+import { useServerStatus } from "../../lib/server-status";
 
 const APP_VERSION = Constants.expoConfig?.version ?? "unknown";
 
@@ -32,9 +31,8 @@ export default function SettingsScreen() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
   const [testSucceeded, setTestSucceeded] = useState(false);
-  const [health, setHealth] = useState<ReturnType<typeof HealthResponseSchema.parse> | null>(null);
-  const [tunnelStatus, setTunnelStatus] = useState<ReturnType<typeof TunnelStatusResponseSchema.parse> | null>(null);
-  const [mobileMinVersion, setMobileMinVersion] = useState<string | undefined>(undefined);
+  const { health, tunnelStatus, mobileMinVersion, isUnreachable, refetch: refetchServerStatus } =
+    useServerStatus(baseUrl);
 
   useEffect(() => {
     setServerUrl(baseUrl);
@@ -52,36 +50,6 @@ export default function SettingsScreen() {
       }
     });
   }, []);
-
-  useEffect(() => {
-    let active = true;
-    const refreshStatus = async () => {
-      try {
-        const [healthResponse, tunnelResponse, versionResponse] = await Promise.all([
-          publicApi.get("/health", undefined, HealthResponseSchema),
-          publicApi.get("/tunnel-url", undefined, TunnelStatusResponseSchema),
-          publicApi.get("/version", undefined, VersionResponseSchema).catch(() => null),
-        ]);
-        if (!active) return;
-        setHealth(healthResponse);
-        setTunnelStatus(tunnelResponse);
-        setMobileMinVersion(versionResponse?.mobileMinVersion);
-      } catch {
-        if (!active) return;
-        setHealth(null);
-        setTunnelStatus(null);
-        setMobileMinVersion(undefined);
-      }
-    };
-    refreshStatus().catch(() => {});
-    const interval = setInterval(() => {
-      refreshStatus().catch(() => {});
-    }, 30_000);
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
-  }, [baseUrl]);
 
   const handleSaveUrl = async () => {
     const url = serverUrl.replace(/\/+$/, "");
@@ -257,6 +225,17 @@ export default function SettingsScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Server Status</Text>
+        {isUnreachable && (
+          <View style={styles.versionWarningBanner}>
+            <Feather name="wifi-off" size={16} color={colors.destructive} />
+            <Text style={styles.versionWarningText}>
+              Can't reach the server at this URL. Check your connection and the backend URL above.
+            </Text>
+            <TouchableOpacity onPress={() => refetchServerStatus()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="refresh-cw" size={16} color={colors.destructive} />
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={styles.serverCard}>
           <View style={styles.serverRow}>
             <Text style={styles.serverLabel}>Status</Text>

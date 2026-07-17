@@ -9,7 +9,7 @@ import EmptyState from "../../components/ui/EmptyState";
 import LoadingState from "../../components/ui/LoadingState";
 import ActionSheet from "../../components/ui/ActionSheet";
 import { colors } from "../../constants/colors";
-import { getErrorMessage } from "../../lib/error-message";
+import { getErrorMessage, isServerUnreachable } from "../../lib/error-message";
 import type { RemoteProcess } from "@remotectrl/api-zod";
 
 function getCpuColor(cpu: number) {
@@ -19,7 +19,7 @@ function getCpuColor(cpu: number) {
 }
 
 export default function ProcessesScreen() {
-  const { data: processes, isLoading, refetch } = useGetProcesses({ refetchInterval: 10000 });
+  const { data: processes, isLoading, isError, error, refetch } = useGetProcesses({ refetchInterval: 10000 });
   const killProcess = useKillProcess();
   const [search, setSearch] = useState("");
   const [killTarget, setKillTarget] = useState<RemoteProcess | null>(null);
@@ -52,6 +52,13 @@ export default function ProcessesScreen() {
 
       {isLoading ? (
         <LoadingState count={5} />
+      ) : isError && isServerUnreachable(error) ? (
+        <EmptyState
+          icon="wifi-off"
+          message={getErrorMessage(error)}
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
       ) : (
         <FlatList
           data={filtered}

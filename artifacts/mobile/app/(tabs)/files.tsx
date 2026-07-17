@@ -10,7 +10,7 @@ import EmptyState from "../../components/ui/EmptyState";
 import LoadingState from "../../components/ui/LoadingState";
 import ActionSheet from "../../components/ui/ActionSheet";
 import { colors } from "../../constants/colors";
-import { getErrorMessage } from "../../lib/error-message";
+import { getErrorMessage, isServerUnreachable } from "../../lib/error-message";
 import type { FileItem } from "@remotectrl/api-zod";
 
 const BINARY_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".mp4", ".zip", ".exe", ".pdf", ".bin", ".dll", ".so", ".dmg", ".iso"]);
@@ -38,9 +38,8 @@ export default function FilesScreen() {
   const [downloading, setDownloading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FileItem | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  const { data, isLoading, refetch } = useListFiles(currentPath);
+  const { data, isLoading, isError, error, refetch } = useListFiles(currentPath);
   const deleteFile = useDeleteFile();
   const makeDir = useMakeDirectory();
   const readFile = useReadFile();
@@ -210,6 +209,13 @@ export default function FilesScreen() {
 
       {isLoading ? (
         <LoadingState count={5} />
+      ) : isError && isServerUnreachable(error) ? (
+        <EmptyState
+          icon="wifi-off"
+          message={getErrorMessage(error)}
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
       ) : (
         <FlatList
           data={sorted}

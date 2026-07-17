@@ -200,8 +200,12 @@ included in `pnpm test` and CI's `test-mobile` job) using `jest-expo` and
 - `lib/__tests__/error-message.test.ts` — `getErrorMessage`/
   `isServerUnreachable` (`lib/error-message.ts`), which every screen now
   uses instead of showing a raw caught error's `.message` directly.
+- `lib/__tests__/server-status.test.ts` — `useServerStatus`
+  (`lib/server-status.ts`), the shared `/health` + `/tunnel-url` +
+  `/version` polling hook behind Settings' server status card and
+  unreachable-state detection.
 
-As of this pass: 6 test files, 59 tests, all passing.
+As of this pass: 7 test files, 64 tests, all passing.
 
 CI's `windows-workspace` job runs `pnpm typecheck`, `pnpm test`, and
 `pnpm build:server` on `windows-latest` on every push/PR — not just on

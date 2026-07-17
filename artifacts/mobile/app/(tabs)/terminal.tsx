@@ -8,7 +8,7 @@ import Badge from "../../components/ui/Badge";
 import EmptyState from "../../components/ui/EmptyState";
 import LoadingState from "../../components/ui/LoadingState";
 import { colors } from "../../constants/colors";
-import { getErrorMessage } from "../../lib/error-message";
+import { getErrorMessage, isServerUnreachable } from "../../lib/error-message";
 import type { Session } from "@remotectrl/api-zod";
 
 const STATUS_VARIANT: Record<string, "connected" | "connecting" | "error" | "disconnected"> = {
@@ -20,7 +20,7 @@ const STATUS_VARIANT: Record<string, "connected" | "connecting" | "error" | "dis
 
 export default function TerminalScreen() {
   const router = useRouter();
-  const { data: sessions, isLoading, refetch } = useGetSessions({ refetchInterval: 5000 });
+  const { data: sessions, isLoading, isError, error, refetch } = useGetSessions({ refetchInterval: 5000 });
   const createSession = useCreateSession();
   const closeSession = useCloseSession();
   const renameSession = useRenameSession();
@@ -74,6 +74,13 @@ export default function TerminalScreen() {
 
       {isLoading ? (
         <LoadingState count={3} />
+      ) : isError && isServerUnreachable(error) ? (
+        <EmptyState
+          icon="wifi-off"
+          message={getErrorMessage(error)}
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
       ) : (
         <FlatList
           data={(sessions || []) as Session[]}
