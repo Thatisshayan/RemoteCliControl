@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
 import { getBaseUrl, setApiToken, setBaseUrl } from "@remotectrl/api-client-react";
 import { RuntimeConfigProvider, useRuntimeConfig } from "../runtime-config";
+import { notifyAuthExpired } from "../auth-expired";
 
 // The shared HTTP client (`@remotectrl/api-client-react`) is what terminal,
 // files, and every other feature actually read the base URL/token from at
@@ -182,5 +183,66 @@ describe("live backend URL switching", () => {
     expect(setBaseUrl).toHaveBeenCalledWith("http://localhost:3000");
     expect(setApiToken).toHaveBeenCalledWith(undefined);
     await expect(SecureStore.getItemAsync("api-token")).resolves.toBeNull();
+  });
+});
+
+describe("auth-expired recovery", () => {
+  it("flips authExpired when the shared auth-expired signal fires", async () => {
+    const { result } = renderHook(() => useRuntimeConfig(), { wrapper });
+    await waitFor(() => expect(result.current.hydrated).toBe(true));
+    expect(result.current.authExpired).toBe(false);
+
+    act(() => {
+      notifyAuthExpired();
+    });
+
+    expect(result.current.authExpired).toBe(true);
+  });
+
+  it("dismissAuthExpired clears the flag without touching the saved token", async () => {
+    const { result } = renderHook(() => useRuntimeConfig(), { wrapper });
+    await waitFor(() => expect(result.current.hydrated).toBe(true));
+
+    act(() => {
+      notifyAuthExpired();
+    });
+    expect(result.current.authExpired).toBe(true);
+
+    act(() => {
+      result.current.dismissAuthExpired();
+    });
+
+    expect(result.current.authExpired).toBe(false);
+  });
+
+  it("saveApiToken optimistically clears authExpired so a corrected token isn't stuck flagged", async () => {
+    const { result } = renderHook(() => useRuntimeConfig(), { wrapper });
+    await waitFor(() => expect(result.current.hydrated).toBe(true));
+
+    act(() => {
+      notifyAuthExpired();
+    });
+    expect(result.current.authExpired).toBe(true);
+
+    await act(async () => {
+      await result.current.saveApiToken("corrected-token");
+    });
+
+    expect(result.current.authExpired).toBe(false);
+  });
+
+  it("clearLocalState also clears authExpired", async () => {
+    const { result } = renderHook(() => useRuntimeConfig(), { wrapper });
+    await waitFor(() => expect(result.current.hydrated).toBe(true));
+
+    act(() => {
+      notifyAuthExpired();
+    });
+
+    await act(async () => {
+      await result.current.clearLocalState();
+    });
+
+    expect(result.current.authExpired).toBe(false);
   });
 });

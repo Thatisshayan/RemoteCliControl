@@ -8,6 +8,7 @@ import {
   setBaseUrl,
 } from "@remotectrl/api-client-react";
 import { getStoredApiToken, setStoredApiToken, clearStoredApiToken } from "./secure-token";
+import { onAuthExpired } from "./auth-expired";
 
 const SERVER_URL_KEY = "server-url";
 const ONBOARDING_COMPLETE_KEY = "onboardingComplete";
@@ -24,10 +25,12 @@ type RuntimeConfigContextValue = {
   apiToken: string;
   hydrated: boolean;
   onboardingComplete: boolean;
+  authExpired: boolean;
   saveBaseUrl: (url: string) => Promise<void>;
   saveApiToken: (token: string) => Promise<void>;
   markOnboardingComplete: () => Promise<void>;
   clearLocalState: () => Promise<void>;
+  dismissAuthExpired: () => void;
 };
 
 const RuntimeConfigContext = createContext<RuntimeConfigContextValue | null>(null);
@@ -37,6 +40,9 @@ export function RuntimeConfigProvider({ children }: { children: React.ReactNode 
   const [apiTokenState, setApiTokenState] = useState<string>(getApiToken() || "");
   const [hydrated, setHydrated] = useState(false);
   const [onboardingComplete, setOnboardingComplete] = useState(false);
+  const [authExpired, setAuthExpired] = useState(false);
+
+  useEffect(() => onAuthExpired(() => setAuthExpired(true)), []);
 
   useEffect(() => {
     let active = true;
@@ -69,6 +75,7 @@ export function RuntimeConfigProvider({ children }: { children: React.ReactNode 
       apiToken: apiTokenState,
       hydrated,
       onboardingComplete,
+      authExpired,
       async saveBaseUrl(url: string) {
         const normalized = url.replace(/\/+$/, "");
         await AsyncStorage.setItem(SERVER_URL_KEY, normalized);
@@ -84,6 +91,10 @@ export function RuntimeConfigProvider({ children }: { children: React.ReactNode 
         }
         setApiToken(normalized || undefined);
         setApiTokenState(normalized);
+        // Optimistically clear — if this token is still rejected, the next
+        // authenticated request re-fires onAuthExpired since it's a live
+        // subscription, not a one-shot flag.
+        setAuthExpired(false);
       },
       async markOnboardingComplete() {
         await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, "true");
@@ -97,9 +108,13 @@ export function RuntimeConfigProvider({ children }: { children: React.ReactNode 
         setBaseUrlState(fallbackBaseUrl);
         setApiTokenState("");
         setOnboardingComplete(false);
+        setAuthExpired(false);
+      },
+      dismissAuthExpired() {
+        setAuthExpired(false);
       },
     }),
-    [apiTokenState, baseUrl, hydrated, onboardingComplete],
+    [apiTokenState, authExpired, baseUrl, hydrated, onboardingComplete],
   );
 
   return <RuntimeConfigContext.Provider value={value}>{children}</RuntimeConfigContext.Provider>;

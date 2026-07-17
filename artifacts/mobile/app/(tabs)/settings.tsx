@@ -14,9 +14,11 @@ export default function SettingsScreen() {
   const {
     baseUrl,
     apiToken,
+    authExpired,
     saveBaseUrl,
     saveApiToken,
     clearLocalState,
+    dismissAuthExpired,
   } = useRuntimeConfig();
   const [serverUrl, setServerUrl] = useState(baseUrl);
   const [tokenInput, setTokenInput] = useState(apiToken);
@@ -130,6 +132,18 @@ export default function SettingsScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Settings</Text>
       </View>
+
+      {authExpired && (
+        <View style={[styles.authExpiredBanner]}>
+          <Feather name="alert-triangle" size={16} color={colors.destructive} />
+          <Text style={styles.authExpiredBannerText}>
+            Your session was rejected by the server. Re-enter or re-test your API token below.
+          </Text>
+          <TouchableOpacity onPress={dismissAuthExpired} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Feather name="x" size={16} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Connection</Text>
@@ -285,6 +299,18 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 40 },
   header: { paddingTop: 50, marginBottom: 20 },
   headerTitle: { color: colors.foreground, fontSize: 24, fontWeight: "700", fontFamily: "Inter_700Bold" },
+  authExpiredBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(255,68,68,0.1)",
+    borderWidth: 1,
+    borderColor: colors.destructive,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 20,
+  },
+  authExpiredBannerText: { color: colors.destructive, fontSize: 13, fontFamily: "Inter_400Regular", flex: 1 },
   section: { marginBottom: 28 },
   sectionTitle: { color: colors.foreground, fontSize: 16, fontWeight: "600", fontFamily: "Inter_600SemiBold", marginBottom: 12 },
   label: { color: colors.mutedForeground, fontSize: 12, fontWeight: "600", fontFamily: "Inter_600SemiBold", marginBottom: 6, marginTop: 12 },

@@ -156,27 +156,31 @@ pass: 14 test files, 102 tests, all passing.
 
 The mobile app has its own Jest suite (`pnpm --filter @remotectrl/mobile test`,
 included in `pnpm test` and CI's `test-mobile` job) using `jest-expo` and
-`@testing-library/react-native`. `artifacts/mobile/lib/__tests__/runtime-config.test.tsx`
-covers config hydration from `AsyncStorage`/`expo-secure-store` and live
-backend URL/token switching, asserting the shared HTTP client
-(`@remotectrl/api-client-react`) is actually repointed, not just local
-component state.
-`artifacts/mobile/lib/__tests__/terminal-ws.test.ts` covers the terminal
-WebSocket URL/subprotocol construction extracted into
-`artifacts/mobile/lib/terminal-ws.ts` — the API token is carried as the sole
-WebSocket subprotocol only when present. As of this pass: 2 test files, 18
-tests, all passing.
+`@testing-library/react-native`:
+
+- `lib/__tests__/runtime-config.test.tsx` — config hydration from
+  `AsyncStorage`/`expo-secure-store` and live backend URL/token switching,
+  asserting the shared HTTP client (`@remotectrl/api-client-react`) is
+  actually repointed, not just local component state.
+- `lib/__tests__/terminal-ws.test.ts` — terminal WebSocket URL/subprotocol
+  construction (`lib/terminal-ws.ts`); the API token is carried as the sole
+  WebSocket subprotocol only when present.
+- `lib/__tests__/connection-check.test.ts` — `checkConnection`, which
+  onboarding and Settings both use to validate a server URL and API token
+  together: `/health` for reachability, then a real authenticated route
+  (`/api/connection`) so a rejected token is caught immediately instead of
+  on the first live screen that needs it.
+- `lib/__tests__/auth-expired.test.ts` — the pub/sub that detects
+  `AUTH_REQUIRED`/`AUTH_INVALID` from any react-query call and notifies
+  `RuntimeConfigProvider`, which flips an `authExpired` flag the root layout
+  uses to redirect to Settings.
+
+As of this pass: 4 test files, 38 tests, all passing.
 
 CI's `windows-workspace` job runs `pnpm typecheck`, `pnpm test`, and
 `pnpm build:server` on `windows-latest` on every push/PR — not just on
 tagged releases — so the actual workspace script layer (not only the
 `ubuntu-latest` jobs) is proven on Windows continuously.
-
-`artifacts/mobile/lib/__tests__/connection-check.test.ts` covers
-`checkConnection`, which onboarding and Settings both use to validate a
-server URL and API token together — checking `/health` for reachability,
-then a real authenticated route (`/api/connection`) so a rejected token is
-caught immediately instead of on the first live screen that needs it.
 
 ## Key Docs
 

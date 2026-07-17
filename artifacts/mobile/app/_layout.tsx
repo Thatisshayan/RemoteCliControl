@@ -1,7 +1,7 @@
 import { useEffect } from "react";
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
@@ -9,10 +9,15 @@ import * as SplashScreen from "expo-splash-screen";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { colors } from "../constants/colors";
 import { debugLog, installGlobalErrorTrap } from "../lib/debug-logger";
-import { RuntimeConfigProvider } from "../lib/runtime-config";
+import { RuntimeConfigProvider, useRuntimeConfig } from "../lib/runtime-config";
+import { isAuthExpiredError, notifyAuthExpired } from "../lib/auth-expired";
 
 let __sideEffectsDone = false;
 
+// Any authenticated request (react-query query or mutation) that comes back
+// AUTH_REQUIRED/AUTH_INVALID means the saved token is no longer good — this
+// is the one place that's true for every screen, so it's the one place that
+// needs to know about it, rather than every hook checking for it itself.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -20,7 +25,34 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
     },
   },
+  queryCache: new QueryCache({
+    onError: (error) => {
+      if (isAuthExpiredError(error)) notifyAuthExpired();
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      if (isAuthExpiredError(error)) notifyAuthExpired();
+    },
+  }),
 });
+
+// Bounces the user to Settings — the one screen that can fix a rejected
+// token — instead of leaving them stuck on a terminal/files/etc. screen
+// silently re-failing every request.
+function AuthExpiredRedirect() {
+  const { authExpired, hydrated, onboardingComplete } = useRuntimeConfig();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!hydrated || !onboardingComplete || !authExpired) return;
+    if (segments[segments.length - 1] === "settings") return;
+    router.replace("/(tabs)/settings");
+  }, [authExpired, hydrated, onboardingComplete, segments, router]);
+
+  return null;
+}
 
 async function bootstrapBackground() {
   if (__sideEffectsDone) return;
@@ -59,6 +91,7 @@ function RootLayout() {
           <ErrorBoundary>
             <RuntimeConfigProvider>
               <QueryClientProvider client={queryClient}>
+                  <AuthExpiredRedirect />
                   <Stack
                     screenOptions={{
                       headerShown: false,
