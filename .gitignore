@@ -16,3 +16,7 @@ artifacts/mobile/.expo/
 .removeAllScreenshots/
 artifacts/api-server/release/
 MUSTDONOW.md
+14.07.2026CurrentStateofRepo.md
+audits/*.md
+audits/*.txt
+!audits/README.md

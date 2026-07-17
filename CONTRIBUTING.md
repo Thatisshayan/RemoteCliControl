@@ -55,9 +55,21 @@ When behavior changes, sync at least:
 
 - `README.md`
 - `ARCHITECTURE.md`
+- `docs/README.md`
+- `docs/governance/REPO_RULES.md`, if repo workflow or agent expectations changed
+- `docs/governance/DEFERRED_WORK.md`, if any part of the requested work was deferred
 - `artifacts/mobile/BUILDING.md`
 - any affected public/legal docs
 - preservation note in `docs/` if the change is architectural
+
+## Agent Rule Entry Point
+
+Repo-level agent instructions live in:
+
+- [AGENTS.md](./AGENTS.md)
+- [docs/governance/REPO_RULES.md](./docs/governance/REPO_RULES.md)
+
+Future automation and audits should start there before making claims about repo state.
 
 ## Verification Reference
 

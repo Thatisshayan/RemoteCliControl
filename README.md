@@ -146,5 +146,9 @@ artifacts/api-server/node_modules/.bin/vitest.CMD run
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
 - [CONTRIBUTING.md](./CONTRIBUTING.md)
+- [AGENTS.md](./AGENTS.md)
+- [docs/README.md](./docs/README.md)
+- [docs/governance/REPO_RULES.md](./docs/governance/REPO_RULES.md)
+- [docs/ROADMAP_NOW_NEXT_LATER_2026-07-17.md](./docs/ROADMAP_NOW_NEXT_LATER_2026-07-17.md)
 - [artifacts/mobile/BUILDING.md](./artifacts/mobile/BUILDING.md)
 - [docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md](./docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md)
