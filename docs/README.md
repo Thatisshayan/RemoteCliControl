@@ -26,9 +26,10 @@ This index exists so project documents remain easy to find for both humans and a
 
 Tracked audits and summaries currently in the repo:
 
-- [docs/MOBILE_AUDIT_REPORT.md](./MOBILE_AUDIT_REPORT.md)
-- [docs/APISERVER_AUDIT_REPORT.md](./APISERVER_AUDIT_REPORT.md)
-- [docs/FINAL_AUDIT_REPORT.md](./FINAL_AUDIT_REPORT.md)
+- [audits/18.07.2026OpenCodeGeneralAudit.md](../audits/18.07.2026OpenCodeGeneralAudit.md) — latest: general audit + execution pass (2026-07-18)
+- [audits/07.07.2026ClaudeSonnet5FinalAudit.md](../audits/07.07.2026ClaudeSonnet5FinalAudit.md) — full codebase audit (2026-07-07)
+- [audits/07.07.2026ClaudeSonnet5ApiServerLibAudit.md](../audits/07.07.2026ClaudeSonnet5ApiServerLibAudit.md) — API server & lib audit (2026-07-07)
+- [audits/07.07.2026ClaudeSonnet5MobileAudit.md](../audits/07.07.2026ClaudeSonnet5MobileAudit.md) — mobile audit (2026-07-07)
 
 Private or temporary audit working files belong under `audits/` and must follow the repo naming and ignore rules from the governance docs.
 

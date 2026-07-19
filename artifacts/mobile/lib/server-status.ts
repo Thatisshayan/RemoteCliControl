@@ -40,17 +40,30 @@ export function useServerStatus(baseUrl: string, options?: { intervalMs?: number
 
   const refresh = useCallback(async () => {
     try {
-      const [healthResponse, tunnelResponse, versionResponse] = await Promise.all([
+      const [healthResult, tunnelResult, versionResult] = await Promise.allSettled([
         publicApi.get("/health", undefined, HealthResponseSchema),
         publicApi.get("/tunnel-url", undefined, TunnelStatusResponseSchema),
-        publicApi.get("/version", undefined, VersionResponseSchema).catch(() => null),
+        publicApi.get("/version", undefined, VersionResponseSchema),
       ]);
       if (!mountedRef.current) return;
+
+      const health = healthResult.status === "fulfilled" ? healthResult.value : null;
+      const tunnelStatus = tunnelResult.status === "fulfilled" ? tunnelResult.value : null;
+      const versionResponse = versionResult.status === "fulfilled" ? versionResult.value : null;
+
+      // Only flag unreachable when the health endpoint itself failed with
+      // a network-level error (no server response). A coded API error
+      // (e.g. 403) means the server responded — it's reachable but the
+      // token/request is wrong.
+      const healthRejected = healthResult.status === "rejected";
+      const healthError = healthRejected ? healthResult.reason : null;
+      const isNetworkFailure = healthRejected && isServerUnreachable(healthError);
+
       setState({
-        health: healthResponse,
-        tunnelStatus: tunnelResponse,
+        health,
+        tunnelStatus,
         mobileMinVersion: versionResponse?.mobileMinVersion,
-        isUnreachable: false,
+        isUnreachable: isNetworkFailure,
         isLoading: false,
         lastCheckedAt: Date.now(),
       });

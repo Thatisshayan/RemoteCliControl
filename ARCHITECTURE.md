@@ -153,7 +153,7 @@ After onboarding, screens do not depend on `EXPO_PUBLIC_DOMAIN` for live routing
 Latest synced implementation verified on Friday, July 17, 2026:
 
 - all edited TypeScript package configs compile
-- API server Vitest suite passes (16 files, 111 tests), including:
+- API server Vitest suite passes (18 files, 141 tests), including:
   - an end-to-end happy-path smoke test that exercises the real Express app
     and WebSocket upgrade handler across connection, session, terminal, and
     files
@@ -177,3 +177,10 @@ repo or PAT.
 See [docs/IOS_TESTFLIGHT_CI_MANUAL.md](./docs/IOS_TESTFLIGHT_CI_MANUAL.md)
 for the full operating manual, including the fastlane lanes, one-time setup,
 and known failure modes already fixed in this pipeline.
+
+### Fallback: EAS Build Workflow
+
+`.github/workflows/eas-build.yml` provides an alternative iOS build path
+using EAS Build (Expo-hosted). This is a fallback for when the fastlane
+pipeline is unavailable or for ad-hoc builds. It is not the primary
+release path. Node version is aligned to 20 to match `ci.yml`.

@@ -52,7 +52,9 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   if (err instanceof HttpError) {
     return sendError(res, err.status, err.code, err.message, err.details);
   }
-  return sendError(res, err.status || 500, err.code || "INTERNAL_ERROR", err.message || "INTERNAL_ERROR");
+  // Never leak internal error messages (SSH/SFTP strings, file paths, etc.)
+  // to the client — log the full message server-side only.
+  return sendError(res, err.status || 500, err.code || "INTERNAL_ERROR", "Internal server error");
 });
 
 export default app;

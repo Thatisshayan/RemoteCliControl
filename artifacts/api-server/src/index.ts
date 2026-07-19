@@ -5,13 +5,27 @@ import { startTunnel, stopTunnel } from "./lib/tunnel.js";
 import logger from "./lib/logger.js";
 import { notifyServerStarted } from "./lib/pushNotifications.js";
 import { buildStartupSummary, formatStartupSummary } from "./lib/startupSummary.js";
+import { loadConfig } from "./lib/config.js";
 import packageJson from "../package.json" with { type: "json" };
 
 const PORT = process.env.PORT;
-const API_TOKEN = process.env.API_TOKEN;
+let API_TOKEN = process.env.API_TOKEN;
 
 if (!PORT) {
   throw new Error("PORT environment variable is required");
+}
+
+// If API_TOKEN was not provided via env, try loading from config.json
+// (written by POST /api/setup/init). This closes the auth-bypass gap
+// where setup generated a token but direct launch ignored it.
+if (!API_TOKEN) {
+  const config = loadConfig();
+  if (config?.API_TOKEN) {
+    API_TOKEN = config.API_TOKEN;
+    // Propagate into process.env so app.ts / auth.ts pick it up.
+    process.env.API_TOKEN = API_TOKEN;
+    logger.info("API_TOKEN loaded from config.json (set process.env.API_TOKEN to override)");
+  }
 }
 
 const tunnelEnabled = process.env.CLOUDFLARE_TUNNEL === "true" || process.env.CLOUDFLARE_TUNNEL === "1";

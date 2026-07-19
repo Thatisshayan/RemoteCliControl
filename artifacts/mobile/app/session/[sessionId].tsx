@@ -8,6 +8,7 @@ import { getApiToken } from "@remotectrl/api-client-react";
 import { colors } from "../../constants/colors";
 import { useRuntimeConfig } from "../../lib/runtime-config";
 import { buildTerminalSocketArgs, sanitizeSessionId } from "../../lib/terminal-ws";
+import { sanitizeCommand } from "../../lib/sanitize-command";
 
 const ANSI_COLORS: Record<number, string> = {
   30: "#4d4d4d", 31: "#ff4444", 32: "#00ff88", 33: "#ffaa00",
@@ -46,27 +47,12 @@ function parseAnsi(text: string): AnsiSegment[] {
 
 const MAX_HISTORY = 100;
 const MAX_LINES = 5000;
-const CONTROL_CHARS = new Set(["\t", "\x03", "\x04", "\x0d", "\x7f"]);
 // wsHandler.ts closes with this code when the session id it was given
 // doesn't exist server-side -- the normal outcome of a backend restart,
 // since sessions live only in server memory. Retrying the same dead
 // session id in a loop would never succeed; this needs a distinct
 // "session lost" UX instead of the generic transient-disconnect retry.
 const SESSION_NOT_FOUND_CODE = 4004;
-
-function sanitizeCommand(cmd: string): string {
-  if (!cmd || typeof cmd !== "string") return cmd;
-  cmd = cmd.replace(/\x1b\[[0-9;]*m/g, "");
-  cmd = cmd.trim();
-  if (cmd.length === 0) return cmd;
-  if (cmd.length > 128) throw new Error("Command too long");
-  if (cmd.includes("\x00")) throw new Error("Null byte not allowed");
-  if (CONTROL_CHARS.has(cmd)) return cmd;
-  const dangerousChars = /[<>&;'"|`]/;
-  if (dangerousChars.test(cmd)) throw new Error("Invalid command characters");
-  if (!/^[a-zA-Z0-9_\-./=@:\s\\]+$/.test(cmd)) throw new Error("Command contains invalid characters");
-  return cmd;
-}
 
 export default function SessionScreen() {
   const router = useRouter();
@@ -185,9 +171,11 @@ export default function SessionScreen() {
 
     ws.onerror = (error) => {
       console.error("WebSocket error:", error);
-      setReconnectStatus("Connection error. Attempting to reconnect...");
       isReconnecting.current = false;
-      ws.close();
+      // Do not update reconnectStatus here — onclose always follows
+      // onerror and owns the reconnect/session-lost UX. Calling
+      // ws.close() is also redundant since the socket is already
+      // closing when onerror fires.
     };
   }, [apiToken, baseUrl, sessionId]);
 

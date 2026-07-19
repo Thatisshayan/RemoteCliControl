@@ -223,6 +223,57 @@ describe("OpenAPI <-> live route table parity", () => {
     // 400 legitimately with the mocked/empty backing state (e.g. no active
     // connection configured). Only the content-type distinguishes "real
     // route, any outcome" from "Express never matched this path/method".
-    expect(response.headers["content-type"]).toMatch(/^application\/json/);
+    //
+    // Exception: /api/setup/html deliberately returns text/html, not JSON.
+    if (openApiPath !== "/api/setup/html") {
+      expect(response.headers["content-type"]).toMatch(/^application\/json/);
+    }
+  });
+
+  // Bidirectional: every real route must also appear in openapi.yaml.
+  // This catches undocumented routes that the openapi→app check above
+  // cannot see (it only checks openapi→app, not app→openapi).
+  const KNOWN_APP_ROUTES: RouteEntry[] = [
+    { method: "GET", path: "/health" },
+    { method: "GET", path: "/tunnel-url" },
+    { method: "GET", path: "/version" },
+    { method: "GET", path: "/api/setup" },
+    { method: "POST", path: "/api/setup/init" },
+    { method: "GET", path: "/api/setup/html" },
+    { method: "GET", path: "/api/connection" },
+    { method: "POST", path: "/api/connection" },
+    { method: "POST", path: "/api/connection/test" },
+    { method: "GET", path: "/api/connections" },
+    { method: "POST", path: "/api/connections" },
+    { method: "GET", path: "/api/connections/active" },
+    { method: "DELETE", path: "/api/connections/:id" },
+    { method: "POST", path: "/api/connections/:id/activate" },
+    { method: "GET", path: "/api/sessions" },
+    { method: "POST", path: "/api/sessions" },
+    { method: "PATCH", path: "/api/sessions/:id" },
+    { method: "DELETE", path: "/api/sessions/:id" },
+    { method: "GET", path: "/api/files" },
+    { method: "DELETE", path: "/api/files" },
+    { method: "GET", path: "/api/files/read" },
+    { method: "GET", path: "/api/files/download" },
+    { method: "POST", path: "/api/files/upload" },
+    { method: "POST", path: "/api/files/mkdir" },
+    { method: "PATCH", path: "/api/files/rename" },
+    { method: "GET", path: "/api/processes" },
+    { method: "DELETE", path: "/api/processes/:pid" },
+    { method: "GET", path: "/api/commands" },
+    { method: "POST", path: "/api/commands" },
+    { method: "DELETE", path: "/api/commands/:id" },
+    { method: "GET", path: "/api/push/preferences" },
+    { method: "PUT", path: "/api/push/preferences" },
+    { method: "POST", path: "/api/push/register" },
+    { method: "GET", path: "/api/push/devices" },
+    { method: "DELETE", path: "/api/push/device/:id" },
+  ];
+
+  it("every known app route is documented in openapi.yaml", () => {
+    const openApiPaths = new Set(openApiRoutes.map((r) => `${r.method} ${toExpressPath(r.path)}`));
+    const missing = KNOWN_APP_ROUTES.filter((r) => !openApiPaths.has(`${r.method} ${r.path}`));
+    expect(missing).toEqual([]);
   });
 });

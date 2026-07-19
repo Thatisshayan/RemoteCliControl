@@ -4,40 +4,40 @@
 
 1. **Apple Developer Account** — $99/year at [developer.apple.com](https://developer.apple.com)
 2. **App Store Connect** — Create a new app at [appstoreconnect.apple.com](https://appstoreconnect.apple.com)
-3. **EAS Account** — Free at [expo.dev](https://expo.dev)
+3. **match credentials** — Encrypted certificate/profile storage on the `ios-certs` branch (see [docs/IOS_TESTFLIGHT_CI_MANUAL.md](../docs/IOS_TESTFLIGHT_CI_MANUAL.md) for one-time setup)
 
-## Step 1: Configure EAS Credentials
+## Primary Pipeline: GitHub Actions + fastlane (No EAS Required)
+
+The production iOS pipeline uses `.github/workflows/ios-testflight.yml` with `macos-latest` runner, `fastlane`, and `match`. This runs without a local Mac and without EAS Build.
+
+### How It Works
+
+1. Push a `v*` tag (e.g. `v1.0.5`)
+2. GitHub Actions triggers `ios-testflight.yml`
+3. The job: `expo prebuild` → `fastlane match appstore` → `fastlane gym` → `fastlane upload_to_testflight`
+4. Apple processes the build and notifies via App Store Connect
+
+### One-Time Setup
+
+See [docs/IOS_TESTFLIGHT_CI_MANUAL.md](../docs/IOS_TESTFLIGHT_CI_MANUAL.md) for:
+- `match` certificate/password setup
+- `ios-certs` branch configuration
+- App Store Connect API key generation
+- GitHub secrets configuration (`MATCH_PASSWORD`, `MATCH_GIT_AUTHORIZATION`, `ASC_API_KEY_JSON`)
+
+## Fallback: EAS Build (Optional)
+
+EAS Build is available as a fallback if the fastlane pipeline is unavailable:
 
 ```bash
 cd artifacts/mobile
-eas credentials --platform ios
-```
-
-Follow prompts to:
-- Generate an Apple Distribution Certificate
-- Register your Bundle ID (`com.remotectrl.app`)
-- Generate a Provisioning Profile
-
-## Step 2: Set Apple ID Secrets
-
-```bash
-eas secret:create --name APPLE_ID --value "your-apple-id@email.com"
-eas secret:create --name APPLE_TEAM_ID --value "XXXXXXXXXX"
-```
-
-## Step 3: Build for App Store
-
-```bash
 eas build --platform ios --profile production
-```
-
-## Step 4: Submit to App Store
-
-```bash
 eas submit --platform ios --profile production
 ```
 
-## Step 5: Complete App Store Listing
+Requires an EAS account at [expo.dev](https://expo.dev) and EAS secrets configured via `eas secret:create`.
+
+## Complete App Store Listing
 
 After the build is uploaded, go to [App Store Connect](https://appstoreconnect.apple.com) and fill in:
 
@@ -51,7 +51,7 @@ After the build is uploaded, go to [App Store Connect](https://appstoreconnect.a
 - **Screenshots:** Take 6.7" iPhone screenshots (1290x2796)
 - **App Rating:** 4+ (no objectionable content)
 
-## Step 6: Submit for Review
+## Submit for Review
 
 Click "Submit for Review" in App Store Connect. Apple typically reviews within 24-48 hours.
 

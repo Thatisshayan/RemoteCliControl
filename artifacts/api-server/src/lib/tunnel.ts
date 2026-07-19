@@ -31,7 +31,7 @@ export function startTunnel(port: number): Promise<string> {
     const cloudflaredPath = path.join(process.cwd(), "cloudflared.exe");
     if (!fs.existsSync(cloudflaredPath)) {
       logger.warn("cloudflared.exe not found — skipping tunnel");
-      resolve("");
+      reject(new Error("cloudflared.exe not found in working directory"));
       return;
     }
 
@@ -69,7 +69,6 @@ export function startTunnel(port: number): Promise<string> {
         clearTimeout(startupTimeout);
         startupTimeout = null;
       }
-      tunnelUrl = null;
       if (!tunnelUrl) {
         logger.warn({ exitCode: code }, "Cloudflare Tunnel exited before providing URL");
         tunnelProcess = null;
@@ -80,7 +79,7 @@ export function startTunnel(port: number): Promise<string> {
     startupTimeout = setTimeout(() => {
       if (!tunnelUrl) {
         logger.warn("Cloudflare Tunnel did not produce a URL within 30s");
-        resolve("");
+        reject(new Error("Cloudflare Tunnel did not produce a URL within 30s"));
       }
     }, 30_000);
   });

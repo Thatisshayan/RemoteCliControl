@@ -42,6 +42,60 @@ paths:
               schema:
                 $ref: "#/components/schemas/VersionResponse"
 
+  /api/setup:
+    get:
+      summary: Check whether setup is required
+      responses:
+        "200":
+          description: Setup status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  setupRequired:
+                    type: boolean
+
+  /api/setup/init:
+    post:
+      summary: Complete first-run setup (loopback only)
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                PORT:
+                  type: integer
+                API_TOKEN:
+                  type: string
+                CLOUDFLARE_TUNNEL:
+                  type: boolean
+      responses:
+        "200":
+          description: Setup result with generated API token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  apiToken:
+                    type: string
+
+  /api/setup/html:
+    get:
+      summary: Setup wizard HTML page (loopback only)
+      responses:
+        "200":
+          description: HTML setup page
+          content:
+            text/html:
+              schema:
+                type: string
+
   /api/connection:
     get:
       summary: Get active redacted connection profile
@@ -456,6 +510,62 @@ paths:
               schema:
                 $ref: "#/components/schemas/PushPreferences"
 
+  /api/push/register:
+    post:
+      summary: Register a push notification device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pushToken, platform]
+              properties:
+                pushToken:
+                  type: string
+                platform:
+                  type: string
+                  enum: [ios, android]
+                deviceName:
+                  type: string
+      responses:
+        "200":
+          description: Registered device
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PushDevice"
+
+  /api/push/devices:
+    get:
+      summary: List registered push devices
+      responses:
+        "200":
+          description: Device list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PushDevice"
+
+  /api/push/device/{id}:
+    delete:
+      summary: Remove a push device
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Delete success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
 components:
   schemas:
     PasswordAuthConnectionInput:
@@ -597,6 +707,18 @@ components:
       properties:
         sessionDisconnected: { type: boolean }
         serverHealthChange: { type: boolean }
+    PushDevice:
+      type: object
+      required: [id, pushToken, platform, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        pushToken: { type: string }
+        platform:
+          type: string
+          enum: [ios, android]
+        deviceName: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
     HealthResponse:
       type: object
       required: [status, activeSessions, connectionConfigured, uptimeSeconds, version, authMode, tunnelEnabled]

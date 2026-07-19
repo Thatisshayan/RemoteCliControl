@@ -83,7 +83,15 @@ let state: StoreState = loadState();
 
 // One-time migration: re-persist immediately so any legacy plaintext
 // credentials on disk get encrypted without waiting for the next edit.
+// Back up the existing file first in case of corruption.
 if (state.connections.length > 0) {
+  try {
+    if (fs.existsSync(FILE_PATH)) {
+      fs.copyFileSync(FILE_PATH, FILE_PATH + ".bak");
+    }
+  } catch {
+    // best-effort backup
+  }
   persist();
 }
 
@@ -102,7 +110,11 @@ function persist() {
       passphrase: encryptCredential(c.passphrase),
     })),
   };
-  fs.writeFileSync(FILE_PATH, JSON.stringify(onDisk, null, 2));
+  // Atomic write: write to a temp file then rename. This prevents
+  // corruption if the process crashes mid-write.
+  const tmpPath = FILE_PATH + ".tmp";
+  fs.writeFileSync(tmpPath, JSON.stringify(onDisk, null, 2));
+  fs.renameSync(tmpPath, FILE_PATH);
 }
 
 // Connection (active profile) helpers

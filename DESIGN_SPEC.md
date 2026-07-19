@@ -144,14 +144,14 @@ Three steps in a horizontal pager. No tab bar visible.
 - Eye toggle to reveal token
 - "Skip for now" link (secondary button style)
 - "Continue" primary button
-- On complete: save to AsyncStorage, navigate to tabs
+- On complete: save to SecureStore, navigate to tabs
 
 ### States
 - **Empty:** Initial state with empty fields
 - **Loading:** Spinner in "Test Connection" button
 - **Error:** Red banner with error text
 - **Success:** Green banner with latency, "Continue" enabled
-- **Complete:** Navigate to tabs, AsyncStorage `onboardingComplete: true`
+- **Complete:** Navigate to tabs, SecureStore `onboardingComplete: true`
 
 ---
 
@@ -414,10 +414,10 @@ Presented as a modal or a Stack screen.
 #### About
 - **App Version** — from `expo-constants`
 - **Clear Local Data** — destructive red button, confirm dialog
-  - Clears AsyncStorage, navigates back to onboarding
+  - Clears SecureStore, navigates back to onboarding
 
 ### States
-- **Loaded:** All fields populated from AsyncStorage
+- **Loaded:** All fields populated from SecureStore
 - **Test Connection loading:** Spinner
 - **Test success:** Green banner
 - **Test failure:** Red banner

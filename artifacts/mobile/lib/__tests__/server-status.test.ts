@@ -62,7 +62,12 @@ describe("useServerStatus", () => {
   it("does not flag isUnreachable for a coded API error (server responded)", async () => {
     const codedError = new Error("Forbidden") as Error & { code?: string };
     codedError.code = "HTTP_403";
-    (publicApi.get as jest.Mock).mockImplementation(() => Promise.reject(codedError));
+    (publicApi.get as jest.Mock).mockImplementation((path: string) => {
+      if (path === "/health") return Promise.reject(codedError);
+      if (path === "/tunnel-url") return Promise.resolve({ active: false, tunnelUrl: null });
+      if (path === "/version") return Promise.resolve({ version: "1.0.4" });
+      throw new Error(`unexpected path ${path}`);
+    });
 
     const { result } = renderHook(() => useServerStatus("https://example.com", { intervalMs: 999999 }));
 

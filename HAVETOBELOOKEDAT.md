@@ -1,16 +1,18 @@
 # Items Requiring Manual Review
 
+> **Note (2026-07-17):** This document is preserved as a historical audit artifact from the 5 Jul 2026 codebase review. Most findings have been resolved or addressed. Refer to `docs/governance/DEFERRED_WORK.md` for the current source of truth on open work items.
+
 This document lists items found during the code audit that require human verification or decision-making. These are NOT confirmed bugs - they are areas where the intent or correctness is unclear.
 
 ---
 
 ## api-server
 
-### 1. connection.ts:65-68 - Active Connection Endpoint Returns Credentials
+### 1. ~~connection.ts:65-68 - Active Connection Endpoint Returns Credentials~~
 **File:** `artifacts/api-server/src/routes/connection.ts:65-68`
 **Issue:** The `GET /connections/active` endpoint calls `getActiveConnection()` which returns the full connection object including password/privateKey/passphrase, then sends it directly to the client.
 **Question:** Is this intentional? The mobile client needs credentials for SSH, but exposing them via API could be a security concern depending on the threat model.
-**Status:** NEEDS REVIEW - Likely intentional (mobile needs creds for SSH)
+**Status:** FIXED 2026-07-17 - Now calls `getActiveConnectionSafe()` which returns redacted profile (hasPassword/hasPrivateKey/hasPassphrase booleans, no secrets). See `docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md`.
 
 ### 2. ~~connection.ts:17-19,77 - Password Required Even for SSH Key Auth~~
 **File:** `artifacts/api-server/src/routes/connection.ts:17-19,77`
