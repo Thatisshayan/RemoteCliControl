@@ -150,7 +150,7 @@ After onboarding, screens do not depend on `EXPO_PUBLIC_DOMAIN` for live routing
 
 ## Verification Baseline
 
-Latest synced implementation verified on Friday, July 17, 2026:
+Latest synced implementation verified on Sunday, July 19, 2026:
 
 - all edited TypeScript package configs compile
 - API server Vitest suite passes (18 files, 141 tests), including:
@@ -159,8 +159,13 @@ Latest synced implementation verified on Friday, July 17, 2026:
     files
   - a contract-drift guard tying `lib/api-spec/openapi.yaml` to the shared
     zod schemas and to the live route table
+- Mobile Jest suite passes (8 files, 72 tests), including:
+  - command sanitizer, server status, runtime config, terminal WebSocket,
+    connection check, auth-expired detection, version compatibility,
+    error message utilities
+- Total: 26 test files, 213 tests, all passing
 
-See [docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md](./docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md) for the preservation record.
+See [docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md](./docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md) for the prior preservation record.
 
 ## iOS Release Pipeline
 

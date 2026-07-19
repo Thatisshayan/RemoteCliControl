@@ -172,7 +172,7 @@ manual logs in `files.ts`/`processes.ts`/`push.ts` — goes through `req.log`
 `MOBILE_MIN_VERSION` server env var (unset by default). See
 `artifacts/api-server/src/routes/__tests__/version.test.ts`.
 
-As of this pass: 18 test files, 134 tests, all passing.
+As of this pass: 18 test files, 141 tests, all passing.
 
 The mobile app has its own Jest suite (`pnpm --filter @remotectrl/mobile test`,
 included in `pnpm test` and CI's `test-mobile` job) using `jest-expo` and
@@ -204,8 +204,12 @@ included in `pnpm test` and CI's `test-mobile` job) using `jest-expo` and
   (`lib/server-status.ts`), the shared `/health` + `/tunnel-url` +
   `/version` polling hook behind Settings' server status card and
   unreachable-state detection.
+- `lib/__tests__/sanitize-command.test.ts` — `sanitizeCommand`
+  (`lib/sanitize-command.ts`), the terminal command sanitizer that strips
+  ANSI escapes and enforces length/null-byte constraints without blocking
+  legitimate shell input.
 
-As of this pass: 7 test files, 64 tests, all passing.
+As of this pass: 8 test files, 72 tests, all passing.
 
 CI's `windows-workspace` job runs `pnpm typecheck`, `pnpm test`, and
 `pnpm build:server` on `windows-latest` on every push/PR — not just on

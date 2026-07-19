@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.5 (2026-07-19) — Mobile Bug Fixes + iOS Crash Resolution
+
+### Fixed
+- **SSH key passphrase detection** — connection.tsx now checks for `ENCRYPTED` / `Proc-Type: 4,ENCRYPTED` markers instead of the substring `passphrase`, fixing encrypted key detection for real PEM files
+- **Font size useEffect** — session/[sessionId].tsx:84-86 now uses a `didInitFont` ref guard to prevent the effect from overwriting the user's saved font preference on mount
+- **KeepAwake cleanup** — removed dead `mounted` flag from the KeepAwake useEffect in session/[sessionId].tsx:88-98
+- **openWs dependency** — removed `baseUrl` from the `openWs` useCallback dependency array (session/[sessionId].tsx:180); it was not used in the callback body and caused unnecessary WebSocket reconnections on every render
+- **Files pull-to-refresh** — `files.tsx:246` now passes `isLoading` to the `refreshing` prop instead of hardcoded `false`
+- **Commands send-to-session** — `commands.tsx:37` now sanitizes the session ID before navigation to prevent injection via crafted IDs
+- **Debug logger fetch loop** — `debug-logger.ts:46` now breaks after the first fetch instead of firing to all LAN candidates simultaneously
+- **Debug logger localhost filter** — `debug-logger.ts:38` now skips `localhost` as a candidate (the phone cannot reach itself)
+- **Session history sanitization** — `session/[sessionId].tsx:209` now stores `sanitizedCmd` instead of raw `cmd` in command history
+- **iOS startup crash** — added `privacyManifests` to `app.json` under `expo.ios` with required API categories (UserDefaults, FileTimestamp, DiskSpace, SystemBootTime); iOS 17+ kills apps at launch without `PrivacyInfo.xcprivacy`
+- **React Native Web in production** — removed `react-native-web` from production dependencies; it is web-only and caused unnecessary bundle bloat on iOS
+
 ## 1.0.4 (2026-07-17) — Stabilization Release
 
 ### Fixed

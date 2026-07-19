@@ -42,76 +42,117 @@ When deferring work, add:
   Resume hint: Pick a generation direction (spec-first vs schema-first) before writing any code, since it changes which file becomes hand-authored and which two become generated. Whichever direction is chosen, add a CI step that regenerates and diffs against committed output, failing the build on any difference. Once real generation exists, contract-snapshot.test.ts's regex-based OpenAPI parsing can likely be deleted in favor of asserting against the generator's own output.
   Owner: Unassigned
 
+### 2026-07-19 (Mobile Bug Fixes + iOS Crash)
+
+- Status: RESOLVED 2026-07-19.
+  Area: SSH key passphrase detection
+  Deferred item: connection.tsx:52,77 used `privateKey.includes("passphrase")` to detect encrypted keys — rejected valid unencrypted keys and missed real encrypted PEM files.
+  Resolution: Now checks for `ENCRYPTED` or `Proc-Type: 4,ENCRYPTED` markers.
+
+- Status: RESOLVED 2026-07-19.
+  Area: Font size useEffect
+  Deferred item: session/[sessionId].tsx:84-86 overwrote user's saved font preference on every mount.
+  Resolution: Added `didInitFont` ref guard so the effect only applies default size on first mount.
+
+- Status: RESOLVED 2026-07-19.
+  Area: KeepAwake cleanup
+  Deferred item: session/[sessionId].tsx:88-98 had a dead `mounted` flag in KeepAwake cleanup.
+  Resolution: Removed dead `mounted` flag.
+
+- Status: RESOLVED 2026-07-19.
+  Area: openWs dependency
+  Deferred item: session/[sessionId].tsx:180 included `baseUrl` in `openWs` useCallback deps — caused unnecessary WebSocket reconnections.
+  Resolution: Removed `baseUrl` from deps (not used in callback body).
+
+- Status: RESOLVED 2026-07-19.
+  Area: Files pull-to-refresh
+  Deferred item: files.tsx:246 had hardcoded `refreshing={false}` — pull-to-refresh indicator never showed.
+  Resolution: Changed to `refreshing={isLoading}`.
+
+- Status: RESOLVED 2026-07-19.
+  Area: Commands send-to-session
+  Deferred item: commands.tsx:37 used raw session ID in navigation — vulnerable to injection via crafted IDs.
+  Resolution: Session ID is now sanitized via `.replace(/[^a-zA-Z0-9_-]/g, "")` before navigation.
+
+- Status: RESOLVED 2026-07-19.
+  Area: Debug logger fetch loop
+  Deferred item: debug-logger.ts:40-46 fired fetches to ALL LAN candidates simultaneously — wasted network and created noise.
+  Resolution: Added `break` after first fetch; also skips `localhost` (phone can't reach itself).
+
+- Status: RESOLVED 2026-07-19.
+  Area: Session history sanitization
+  Deferred item: session/[sessionId].tsx:209 stored raw `cmd` in history — unsanitized input persisted.
+  Resolution: Now stores `sanitizedCmd` in command history.
+
+- Status: RESOLVED 2026-07-19.
+  Area: iOS startup crash
+  Deferred item: Missing `privacyManifests` in app.json — iOS 17+ kills apps at launch without `PrivacyInfo.xcprivacy`.
+  Resolution: Added `privacyManifests` with required API categories (UserDefaults CA92.1, FileTimestamp C617.1, DiskSpace E174.1, SystemBootTime 35F9.1).
+
+- Status: RESOLVED 2026-07-19.
+  Area: React Native Web bloat
+  Deferred item: `react-native-web` in production dependencies — web-only package caused unnecessary bundle bloat on iOS.
+  Resolution: Removed from `dependencies` in `package.json`.
+
 ### 2026-07-18 (from OpenCode General Audit)
 
 - Area: Mobile terminal command sanitization
-  Deferred item: Fix `sanitizeCommand` in `session/[sessionId].tsx:57-69` — currently blocks most real shell commands (cd, npm, git, echo, globs). The allow-class and dangerous-chars regex reject common shell characters (~ $ ( ) * ? % # + > < & ; ' " |).
-  Reason deferred: Highest priority fix but requires careful testing across Windows/Unix shells to ensure security is maintained while allowing real commands.
-  Resume hint: Rewrite to strip ANSI + null bytes + enforce length only. Remove dangerousChars regex and the overly restrictive allow-class. The server SSH layer is the real security boundary; client-side should not block legitimate command input.
-  Owner: Unassigned
+  Status: RESOLVED 2026-07-17.
+  Deferred item: Fix `sanitizeCommand` in `session/[sessionId].tsx:57-69` — currently blocks most real shell commands (cd, npm, git, echo, globs).
+  Resolution: Rewrote to strip ANSI + null bytes + enforce length only. Extracted to `lib/sanitize-command.ts` with 8 dedicated tests. The server SSH layer is the real security boundary; client-side no longer blocks legitimate command input.
 
 - Area: Terminal WebSocket 4004 UX
+  Status: RESOLVED 2026-07-17.
   Deferred item: Fix `onerror` handler in `session/[sessionId].tsx:186-191` — it fires alongside the clean 4004 close, overwrites the session-lost status with "Connection error" text, and calls `ws.close()` redundantly.
-  Reason deferred: Requires careful ordering analysis of React Native WebSocket event delivery.
-  Resume hint: Make `onclose` the sole owner of session-lost/reconnect logic. Remove or gate the `onerror` status update and redundant `ws.close()`.
-  Owner: Unassigned
+  Resolution: `onclose` is now the sole owner of session-lost/reconnect logic; `onerror` no longer interferes with the clean 4004 close path.
 
 - Area: Tunnel failure reporting
-  Deferred item: Fix `tunnel.ts:72-73` dead logic (tunnelUrl = null then if (!tunnelUrl) always true) and `tunnel.ts:34,83` + `index.ts:46-49` where startTunnel resolves "" on failure instead of rejecting, making tunnelError in startup summary always null.
-  Reason deferred: Requires changing startTunnel's return type/contract and index.ts caller logic.
-  Resume hint: Remove dead if-guard, make startTunnel reject on failure instead of resolving "", populate tunnelError in index.ts catch block. Add tests for the FAILED branch in startupSummary.
-  Owner: Unassigned
+  Status: RESOLVED 2026-07-17.
+  Deferred item: Fix `tunnel.ts:72-73` dead logic and `startTunnel` resolving "" on failure.
+  Resolution: Removed dead if-guard; `startTunnel` now rejects on failure instead of resolving ""; startup summary surfaces WHY the tunnel failed.
 
 - Area: Setup-token auth bypass
-  Deferred item: Fix `setup.ts` writing API_TOKEN to config.json but server reading only process.env.API_TOKEN — direct launch (README Quickstart) runs unauthenticated even after setup.
-  Reason deferred: Requires choosing between loading config.json into process.env at startup, or documenting the env requirement explicitly.
-  Resume hint: In index.ts, after `const API_TOKEN = process.env.API_TOKEN;`, add a fallback: if (!API_TOKEN) load from config.json via loadConfig(). This preserves env-var override while supporting the setup flow.
-  Owner: Unassigned
+  Status: RESOLVED 2026-07-17.
+  Deferred item: Fix server reading only `process.env.API_TOKEN` after setup writes to config.json.
+  Resolution: `index.ts` now loads `API_TOKEN` from `config.json` via `loadConfig()` as fallback when `process.env.API_TOKEN` is unset.
 
 - Area: commands.ts hardening
-  Deferred item: commands.ts uses manual validation, returns 201 (openapi says 200), error body lacks code field. Needs SavedCommandSchema validation, status code fix, sendError usage.
-  Reason deferred: Small fix but needs openapi.yaml update and test additions.
-  Resume hint: Import parseBody + SavedCommandSchema from contracts, use parseBody, return res.status(200).json(), use sendError for validation errors. Update openapi.yaml 201→200.
-  Owner: Unassigned
+  Status: RESOLVED 2026-07-17.
+  Deferred item: commands.ts uses manual validation, returns 201 (openapi says 200), error body lacks code field.
+  Resolution: Now uses `SavedCommandSchema` via `parseBody`, returns 200, uses `sendError` with proper error codes.
 
 - Area: OpenAPI completeness
-  Deferred item: Add /api/setup/* and POST /api/push/register, GET /api/push/devices, DELETE /api/push/device/:id to openapi.yaml. Make contract-snapshot.test.ts bidirectional (every real route must be documented).
-  Reason deferred: Requires writing OpenAPI paths for undocumented routes and reversing the snapshot test assertion.
-  Resume hint: Add the 5 missing path entries to openapi.yaml. In contract-snapshot.test.ts, add a second it.each that collects all registered routes from the Express app and asserts every one appears in openapiRoutes.
-  Owner: Unassigned
+  Status: RESOLVED 2026-07-17.
+  Deferred item: Add undocumented routes to openapi.yaml and make contract guard bidirectional.
+  Resolution: Added `/api/setup/*`, `POST /api/push/register`, `GET /api/push/devices`, `DELETE /api/push/device/:id` to spec with `PushDevice` schema. `contract-snapshot.test.ts` is now bidirectional (every real route must be documented).
 
 - Area: Health integration test
-  Deferred item: Replace no-op health.integration.test.ts (mock-only, doesn't test /health) with a real supertest of /health + the router.
-  Reason deferred: Needs supertest against the real app (similar to smoke.e2e.test.ts setup).
-  Resume hint: Import app, spin up server on port 0, supertest GET /health, assert JSON body has status:"ok" and required fields. Mock store/sshManager like other tests do.
-  Owner: Unassigned
+  Status: RESOLVED 2026-07-17.
+  Deferred item: Replace no-op health.integration.test.ts with real supertest of /health.
+  Resolution: `health.integration.test.ts` now uses real supertest against `GET /health` with store/sshManager mocked at the boundary.
 
 - Area: Error message leakage
-  Deferred item: app.ts:55 returns raw err.message for non-HttpError, leaking SSH/SFTP error strings (incl. file paths) to the client.
-  Reason deferred: Requires a redaction/normalization step in the global error handler.
-  Resume hint: In the catch block, for non-HttpError instances, return a generic "Internal server error" message instead of err.message. Keep the detailed message in req.log only.
-  Owner: Unassigned
+  Status: RESOLVED 2026-07-17.
+  Deferred item: `app.ts:55` returns raw `err.message` for non-HttpError, leaking SSH/SFTP error strings.
+  Resolution: Global error handler now returns a generic "Internal server error" message for non-HttpError; detailed message logged server-side only via `req.log`.
 
 - Area: Store atomic write
-  Deferred item: store.ts persist() uses writeFileSync directly — crash mid-write corrupts store.json with no backup.
-  Reason deferred: Needs temp-file + fs.rename pattern; also needs backup before one-time migration.
-  Resume hint: Write to FILE_PATH + ".tmp", then fs.renameSync to FILE_PATH. Before the migration persist(), copy existing FILE_PATH to FILE_PATH + ".bak".
-  Owner: Unassigned
+  Status: RESOLVED 2026-07-17.
+  Deferred item: `store.ts persist()` uses `writeFileSync` directly — crash mid-write corrupts store.json.
+  Resolution: `persist()` now writes to temp file then `fs.renameSync`; one-time migration backs up existing file first.
 
 - Area: Server-status Promise.all collapse
-  Deferred item: `server-status.ts` uses Promise.all which collapses any /tunnel-url failure into false "server unreachable" even though /health succeeded.
-  Reason deferred: Needs Promise.allSettled or individual catch handlers per endpoint.
-  Resume hint: Use Promise.allSettled for all three calls. Extract results individually. Only set isUnreachable when /health itself fails.
-  Owner: Unassigned
+  Status: RESOLVED 2026-07-17.
+  Deferred item: `server-status.ts` uses `Promise.all` which collapses any `/tunnel-url` failure into false "server unreachable."
+  Resolution: Now uses `Promise.allSettled`; only marks server unreachable when `/health` itself fails.
 
 - Area: Mobile screen tests
-  Deferred item: Add screen/component tests for session/[sessionId].tsx (covers C1 sanitizeCommand, C2 4004 UX) and server-status.ts (covers M2 Promise.all collapse).
+  Deferred item: Add screen/component tests for session/[sessionId].tsx and server-status.ts.
   Reason deferred: No existing screen test convention; needs jest-expo component test setup.
   Resume hint: Start with unit tests for sanitizeCommand (import and test directly). For 4004 UX, test the onclose handler logic in isolation. For server-status, test useServerStatus with mocked publicApi.
   Owner: Unassigned
 
 - Area: Document reconciliation
-  Deferred item: Reconcile test counts (6 contradictory claims across README/ARCHITECTURE/ROADMAP/sync/CHANGELOG), mark stale status docs as historical/superseded, update CHANGELOG, fix app-store/README.md, move audit reports to audits/ per Rule 6/7.
-  Reason deferred: Large doc-only change touching many files; needs careful cross-checking.
-  Resume hint: On disk: 18 server test files, 7 mobile test files. Pick README.md as the canonical source. Add superseded headers to MUSTDONOW/14.07/HAVETOBELOOKEDAT. Update CHANGELOG push/biometric/EAS status. Move docs/*AUDIT_REPORT.md to audits/ with DD.MM.YYYY naming.
-  Owner: Unassigned
+  Status: RESOLVED 2026-07-19.
+  Deferred item: Reconcile test counts, mark stale docs as historical/superseded, update CHANGELOG, fix app-store/README.md, move audit reports to audits/ per Rule 6/7.
+  Resolution: README.md updated to 18 server + 8 mobile test files (141 + 72 = 213 tests). Stale docs (MUSTDONOW, 14.07.2026CurrentStateofRepo, HAVETOBELOOKEDAT) marked historical. CHANGELOG updated. Audit reports moved to `audits/` with correct DD.MM.YYYY naming. docs/README.md index updated.
