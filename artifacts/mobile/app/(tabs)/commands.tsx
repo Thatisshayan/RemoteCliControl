@@ -34,7 +34,8 @@ export default function CommandsScreen() {
     setSelectedCmd(null);
     const activeSessions = (sessions || []) as Session[];
     if (activeSessions.length === 0) return;
-    router.push(`/session/${activeSessions[0].id}?prefill=${encodeURIComponent(cmd.command)}`);
+    const safeId = activeSessions[0].id.replace(/[^a-zA-Z0-9_-]/g, "");
+    if (safeId) router.push(`/session/${safeId}?prefill=${encodeURIComponent(cmd.command)}`);
   };
 
   const handleDelete = async (cmd: SavedCommand) => {

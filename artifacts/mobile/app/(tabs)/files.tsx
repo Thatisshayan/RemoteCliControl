@@ -243,7 +243,7 @@ export default function FilesScreen() {
           )}
           contentContainerStyle={styles.list}
           onRefresh={() => refetch()}
-          refreshing={false}
+          refreshing={isLoading}
           ListEmptyComponent={<EmptyState icon="folder" message="Empty directory" />}
         />
       )}

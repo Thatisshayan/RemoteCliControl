@@ -81,15 +81,18 @@ export default function SessionScreen() {
     });
   }, []);
 
+  const didInitFont = useRef(false);
   useEffect(() => {
+    if (!didInitFont.current) {
+      didInitFont.current = true;
+      return;
+    }
     AsyncStorage.setItem("terminal-font-size", String(fontSize));
   }, [fontSize]);
 
   useEffect(() => {
-    let mounted = true;
     KeepAwake.activateKeepAwakeAsync().catch(() => {});
     return () => {
-      if (!mounted) return;
       try {
         const fn = (KeepAwake as any).deactivateKeepAwake;
         if (typeof fn === "function") fn().catch(() => {});
@@ -177,7 +180,7 @@ export default function SessionScreen() {
       // ws.close() is also redundant since the socket is already
       // closing when onerror fires.
     };
-  }, [apiToken, baseUrl, sessionId]);
+  }, [apiToken, sessionId]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -206,7 +209,7 @@ export default function SessionScreen() {
       wsRef.current.send(sanitizedCmd + "\n");
       if (text === undefined) {
         setHistory((prev) => {
-          const next = [...prev, cmd];
+          const next = [...prev, sanitizedCmd];
           return next.length > MAX_HISTORY ? next.slice(-MAX_HISTORY) : next;
         });
         setHistoryIndex(-1);

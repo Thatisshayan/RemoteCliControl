@@ -49,7 +49,8 @@ export default function ConnectionScreen() {
           setTestResult({ success: false, message: "Invalid SSH private key - must include private key header" });
           return;
         }
-        if (privateKey.includes("passphrase") && !passphrase) {
+        const isEncrypted = privateKey.includes("ENCRYPTED") || privateKey.includes("Proc-Type: 4,ENCRYPTED");
+        if (isEncrypted && !passphrase) {
           setTestResult({ success: false, message: "Passphrase required for encrypted key" });
           return;
         }
@@ -74,7 +75,7 @@ export default function ConnectionScreen() {
     if (authMode === "key" && !privateKey) {
       return Alert.alert("Error", "SSH private key is required when using key authentication");
     }
-    if (authMode === "key" && privateKey.includes("passphrase") && !passphrase) {
+    if (authMode === "key" && privateKey.includes("ENCRYPTED") && !passphrase) {
       return Alert.alert("Error", "Passphrase is required when key is encrypted");
     }
     if (authMode === "password" && !password) {

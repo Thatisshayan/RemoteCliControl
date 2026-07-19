@@ -35,7 +35,7 @@ function postLog(msg: string, data: unknown, hypothesisId: string | null, extra:
       // Try primary URL. If the bundle was built with a stale IP, also try fallbacks.
       const candidates = [
         DEBUG_LOG_URL,
-        ...RIG_HOST_CANDIDATES.filter(h => !DEBUG_LOG_URL.includes(h)).map(h => `http://${h}:8787/log`),
+        ...RIG_HOST_CANDIDATES.filter(h => !DEBUG_LOG_URL.includes(h) && h !== 'localhost').map(h => `http://${h}:8787/log`),
       ];
       for (const u of candidates) {
         fetch(u, {
@@ -43,6 +43,7 @@ function postLog(msg: string, data: unknown, hypothesisId: string | null, extra:
           body: payload,
           headers: { 'content-type': 'application/json' },
         }).catch(() => {});
+        break;
       }
     }
   } catch (_) {}
