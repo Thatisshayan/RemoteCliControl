@@ -1,5 +1,5 @@
 import React from "react";
-import { render, waitFor } from "@testing-library/react-native";
+import { render } from "@testing-library/react-native";
 
 const mockUseFonts = jest.fn();
 jest.mock("expo-splash-screen", () => ({
@@ -56,18 +56,18 @@ describe("RootLayout startup", () => {
     expect(mockedSplashScreen.preventAutoHideAsync).toHaveBeenCalledTimes(1);
   });
 
-  it("hides the splash after fonts load", async () => {
+  it("hides the splash after fonts load", () => {
     mockUseFonts.mockReturnValue([true, undefined]);
     render(<RootLayout />);
 
-    await waitFor(() => expect(mockedSplashScreen.hideAsync).toHaveBeenCalledTimes(1));
+    expect(mockedSplashScreen.hideAsync).toHaveBeenCalledTimes(1);
   });
 
-  it("renders with system font fallbacks and hides the splash when font loading fails", async () => {
+  it("renders with system font fallbacks and hides the splash when font loading fails", () => {
     mockUseFonts.mockReturnValue([false, new Error("font unavailable")]);
     const screen = render(<RootLayout />);
 
     expect(screen.getByTestId("root-stack")).toBeTruthy();
-    await waitFor(() => expect(mockedSplashScreen.hideAsync).toHaveBeenCalledTimes(1));
+    expect(mockedSplashScreen.hideAsync).toHaveBeenCalledTimes(1);
   });
 });
