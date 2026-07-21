@@ -16,7 +16,10 @@ import { BiometricLockGate, BiometricLockProvider } from "../lib/biometric-lock"
 // This must run at module scope. Calling it from an effect is too late: the
 // native splash can already be gone while the root still returns `null` for
 // font loading, leaving a release build on an empty screen.
-void SplashScreen.preventAutoHideAsync();
+// This native call can reject when iOS has already completed (or failed to
+// initialize) the splash lifecycle. It is an optional visual optimization,
+// never a reason to abort the JavaScript bridge before the app can render.
+void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 // Any authenticated request (react-query query or mutation) that comes back
 // AUTH_REQUIRED/AUTH_INVALID means the saved token is no longer good — this
