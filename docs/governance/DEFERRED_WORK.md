@@ -15,6 +15,32 @@ When deferring work, add:
 
 ## Current Deferred Items
 
+### 2026-07-21 (Mobile release-readiness audit)
+
+- Area: iOS startup / splash lifecycle
+  Deferred item: Correct the root splash/font readiness lifecycle before the next iOS build.
+  Reason deferred: The root layout calls `SplashScreen.preventAutoHideAsync()` only after `useFonts` reports success, then renders `null` whenever font loading fails. Expo documents that preventing auto-hide must happen at module scope and that the error state must also release the loading gate. The current ordering can leave a user on an empty/black surface, which can be reported as an app crash. The audit was read-only and the user explicitly requested no build.
+  Resume hint: Move `preventAutoHideAsync()` to module scope, consume the `useFonts` error result, hide the splash for either success or failure, and add a root-layout test for both paths before building.
+  Owner: Unassigned
+
+- Area: TestFlight release provenance
+  Deferred item: Produce a new, uniquely numbered TestFlight candidate only after the startup fixes have been reviewed and verified.
+  Reason deferred: The latest successful TestFlight workflow run (2026-07-17, commit `66332a0`) predates commit `16a668f`, which added the current privacy-manifest configuration. `app.json` still has iOS build number `6`, so the pipeline cannot upload a replacement build with the same number. No build was requested during this audit.
+  Resume hint: Increment `expo.ios.buildNumber`, verify the generated iOS configuration and archive, then smoke-test the exact IPA on a physical iPhone before TestFlight submission.
+  Owner: Unassigned
+
+- Area: Mobile startup observability and test coverage
+  Deferred item: Add production crash reporting plus root-layout and screen/lifecycle tests.
+  Reason deferred: All current mobile tests exercise utilities/hooks; none renders the root layout, font failure path, splash lifecycle, navigation startup, or an iOS-native launch. The imported global error trap is not installed and its debug transport is disabled in production, leaving a TestFlight-native crash without application-side evidence.
+  Resume hint: Add a maintained crash-reporting integration, call its initialization before the React tree mounts, and add root/screen tests with native module mocks. Obtain and attach the Apple crash report for the existing build before declaring a root cause.
+  Owner: Unassigned
+
+- Area: Mobile documentation accuracy
+  Deferred item: Reconcile the claimed iOS startup-crash resolution with the released artifact and Apple/Expo privacy-manifest behavior.
+  Reason deferred: The deferred-work register says the absence of a privacy manifest causes an iOS launch kill, but Expo documents manifests as App Store privacy declarations; the actual TestFlight build predates the manifest change. The asserted launch-crash root cause is therefore unproven.
+  Resume hint: Replace the unsupported causal claim with the crash-log-backed cause once an Apple crash report is available; keep privacy-manifest compliance as a separate release requirement.
+  Owner: Unassigned
+
 ### 2026-07-21
 
 - Status: RESOLVED 2026-07-21.
