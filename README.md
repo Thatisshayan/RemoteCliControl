@@ -124,6 +124,7 @@ If `API_TOKEN` is set, the token must be sent in `sec-websocket-protocol`. Query
 - Terminal, files, and shared HTTP client all read the same saved base URL.
 - Tunnel status comes from `/tunnel-url`.
 - Server health/version come from `/health` and `/version`.
+- When enabled in Settings, biometric authentication locks the app on launch and after it returns from the background.
 
 ## Tunnel Ownership
 
@@ -172,7 +173,7 @@ manual logs in `files.ts`/`processes.ts`/`push.ts` — goes through `req.log`
 `MOBILE_MIN_VERSION` server env var (unset by default). See
 `artifacts/api-server/src/routes/__tests__/version.test.ts`.
 
-As of this pass: 18 test files, 141 tests, all passing.
+As of this pass: 19 test files, 142 tests, all passing.
 
 The mobile app has its own Jest suite (`pnpm --filter @remotectrl/mobile test`,
 included in `pnpm test` and CI's `test-mobile` job) using `jest-expo` and
@@ -209,7 +210,7 @@ included in `pnpm test` and CI's `test-mobile` job) using `jest-expo` and
   ANSI escapes and enforces length/null-byte constraints without blocking
   legitimate shell input.
 
-As of this pass: 8 test files, 72 tests, all passing.
+As of this pass: 9 test files, 75 tests, all passing.
 
 CI's `windows-workspace` job runs `pnpm typecheck`, `pnpm test`, and
 `pnpm build:server` on `windows-latest` on every push/PR — not just on
@@ -243,3 +244,4 @@ is unchanged and still available if EAS usage is restored.
 - [artifacts/mobile/BUILDING.md](./artifacts/mobile/BUILDING.md)
 - [docs/IOS_TESTFLIGHT_CI_MANUAL.md](./docs/IOS_TESTFLIGHT_CI_MANUAL.md)
 - [docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md](./docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md)
+- [docs/LATEST_IMPLEMENTATION_SYNC_2026-07-21.md](./docs/LATEST_IMPLEMENTATION_SYNC_2026-07-21.md)

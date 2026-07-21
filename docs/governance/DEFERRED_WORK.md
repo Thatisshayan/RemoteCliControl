@@ -15,18 +15,38 @@ When deferring work, add:
 
 ## Current Deferred Items
 
+### 2026-07-21
+
+- Status: RESOLVED 2026-07-21.
+  Area: Shared workspace TypeScript toolchain
+  Deferred item: Make the root `pnpm typecheck` script runnable from a clean workspace.
+  Resolution: Added TypeScript as a dev dependency to both shared packages and restored their workspace links. Root `pnpm typecheck` and `pnpm lint` now pass.
+  Owner: Unassigned
+
+- Status: RESOLVED 2026-07-21.
+  Area: API request-log credential redaction
+  Deferred item: Prevent `Authorization` (and other sensitive request headers) from being written to pino-http request logs.
+  Resolution: The shared pino configuration now removes bearer/proxy authorization, cookies, `x-api-key`, and `x-auth-token` beneath pino-http's serialized request object. `logger.test.ts` verifies sentinel bearer/API-key values never reach a log line.
+  Owner: Unassigned
+
+- Status: RESOLVED 2026-07-21.
+  Area: Mobile Jest verification
+  Deferred item: Restore a bounded, reproducible mobile Jest run and prove all mobile suites execute.
+  Resolution: Added the SDK-compatible `babel-preset-expo` as an explicit mobile dev dependency and refreshed the offline workspace linkage. `jest --runInBand` now passes all 9 suites and 75 tests.
+  Owner: Unassigned
+
 ### 2026-07-17
 
 - Area: Mobile push
   Deferred item: Reintroduce push notifications only after a dedicated crash-safe milestone.
-  Reason deferred: Push was intentionally gated during stabilization to keep the core app reliable.
+  Reason deferred: Push was intentionally gated during stabilization to keep the core app reliable. Reintroduction also requires adding Expo's mobile notifications package; the package registry was unavailable during the 2026-07-21 implementation attempt, so a crash-safe client registration flow could not be safely built or verified.
   Resume hint: Revisit server push routes, device registration flow, mobile permission handling, and settings UI truthfulness together.
   Owner: Unassigned
 
-- Area: Biometric enforcement
+- Status: RESOLVED 2026-07-21.
+  Area: Biometric enforcement
   Deferred item: Implement actual biometric session-lock enforcement instead of storing preference only.
-  Reason deferred: Current mobile build persists the preference but does not enforce navigation or session locking.
-  Resume hint: Add app-lock flow, resume behavior, and failure-path tests before presenting the feature as active.
+  Resolution: `BiometricLockProvider` persists the setting and `BiometricLockGate` overlays the app until native biometric authentication succeeds at launch and after backgrounding. Hardware-unavailable, unenrolled, canceled, and failed authentication remain locked with a retry action; unit tests cover success and failure paths.
   Owner: Unassigned
 
 - Area: Expo and TestFlight distribution
@@ -38,7 +58,7 @@ When deferring work, add:
 
 - Area: Shared contract generation
   Deferred item: Build a real code generator so `lib/api-spec/openapi.yaml`, `lib/api-zod/src/schemas.ts`, and `lib/api-client-react/src/hooks.ts` are no longer three independently hand-maintained sources of truth, then enforce in CI that regenerating from the spec produces no diff against what's committed.
-  Reason deferred: Roadmap Now-item 3 ("enforce spec regeneration and generated-output cleanliness in CI") assumed this generator already existed. It doesn't — all three files are hand-written today (see CONTRIBUTING.md "Contract Changes"). Building one is a real architecture change (pick a direction: generate zod+client from the OpenAPI spec, e.g. via `openapi-typescript`/`orval`, or generate the OpenAPI spec from the zod schemas via `zod-to-openapi`; migrate the hand-written files to generated output; verify nothing behavioral breaks) and was judged out of scope for a single roadmap-item pass. In the meantime, `artifacts/api-server/src/__tests__/contract-snapshot.test.ts` (added 2026-07-17) catches drift between the three files by comparison rather than by generation, and CI already runs it on every push/PR via the existing `test` job.
+  Reason deferred: Roadmap Now-item 3 ("enforce spec regeneration and generated-output cleanliness in CI") assumed this generator already existed. It doesn't — all three files are hand-written today (see CONTRIBUTING.md "Contract Changes"). A 2026-07-21 attempt to install the chosen spec-first generator (Orval) was blocked by registry access, so the migration cannot be safely completed or verified in this checkout. In the meantime, `artifacts/api-server/src/__tests__/contract-snapshot.test.ts` (added 2026-07-17) catches drift between the three files by comparison rather than by generation, and CI already runs it on every push/PR via the existing `test` job.
   Resume hint: Pick a generation direction (spec-first vs schema-first) before writing any code, since it changes which file becomes hand-authored and which two become generated. Whichever direction is chosen, add a CI step that regenerates and diffs against committed output, failing the build on any difference. Once real generation exists, contract-snapshot.test.ts's regex-based OpenAPI parsing can likely be deleted in favor of asserting against the generator's own output.
   Owner: Unassigned
 

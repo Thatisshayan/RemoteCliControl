@@ -146,20 +146,20 @@ After onboarding, screens do not depend on `EXPO_PUBLIC_DOMAIN` for live routing
 ### Intentionally limited
 
 - mobile push UI is marked unavailable during stabilization
-- biometric toggle is stored as a preference only; full enforcement is not implemented
+- biometric lock is persisted locally and requires biometric authentication on launch and whenever the app returns from the background
 
 ## Verification Baseline
 
 Latest synced implementation verified on Sunday, July 19, 2026:
 
 - all edited TypeScript package configs compile
-- API server Vitest suite passes (18 files, 141 tests), including:
+- API server Vitest suite passes (19 files, 142 tests), including:
   - an end-to-end happy-path smoke test that exercises the real Express app
     and WebSocket upgrade handler across connection, session, terminal, and
     files
   - a contract-drift guard tying `lib/api-spec/openapi.yaml` to the shared
     zod schemas and to the live route table
-- Mobile Jest suite passes (8 files, 72 tests), including:
+- Mobile Jest suite passes (9 files, 75 tests), including:
   - command sanitizer, server status, runtime config, terminal WebSocket,
     connection check, auth-expired detection, version compatibility,
     error message utilities

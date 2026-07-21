@@ -42,7 +42,7 @@ For remote access builds:
 As of Friday, July 17, 2026:
 
 - push notifications are not presented as a working end-user feature in the stabilized mobile UI
-- biometric storage preference exists, but full lock enforcement is not implemented
+- enabling Biometric Lock requires Face ID, Touch ID, or fingerprint authentication on launch and after the app returns from the background
 
 ## Verification
 

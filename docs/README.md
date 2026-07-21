@@ -16,7 +16,8 @@ This index exists so project documents remain easy to find for both humans and a
 
 ## Current-State Preservation
 
-- [docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md](./LATEST_IMPLEMENTATION_SYNC_2026-07-17.md): latest hardening and stabilization sync
+- [docs/LATEST_IMPLEMENTATION_SYNC_2026-07-21.md](./LATEST_IMPLEMENTATION_SYNC_2026-07-21.md): current security, biometric-lock, and mobile-test sync
+- [docs/LATEST_IMPLEMENTATION_SYNC_2026-07-17.md](./LATEST_IMPLEMENTATION_SYNC_2026-07-17.md): prior hardening and stabilization sync
 
 ## Release Pipelines
 
@@ -26,7 +27,9 @@ This index exists so project documents remain easy to find for both humans and a
 
 Tracked audits and summaries currently in the repo:
 
-- [audits/18.07.2026OpenCodeGeneralAudit.md](../audits/18.07.2026OpenCodeGeneralAudit.md) — latest: general audit + execution pass (2026-07-18)
+- [audits/21.07.2026CodexGeneralAudit.md](../audits/21.07.2026CodexGeneralAudit.md) — current general audit (2026-07-21)
+- [audits/19.07.2026CodexGeneralAudit.md](../audits/19.07.2026CodexGeneralAudit.md) — current general audit (2026-07-19)
+- [audits/18.07.2026OpenCodeGeneralAudit.md](../audits/18.07.2026OpenCodeGeneralAudit.md) — general audit + execution pass (2026-07-18)
 - [audits/07.07.2026ClaudeSonnet5FinalAudit.md](../audits/07.07.2026ClaudeSonnet5FinalAudit.md) — full codebase audit (2026-07-07)
 - [audits/07.07.2026ClaudeSonnet5ApiServerLibAudit.md](../audits/07.07.2026ClaudeSonnet5ApiServerLibAudit.md) — API server & lib audit (2026-07-07)
 - [audits/07.07.2026ClaudeSonnet5MobileAudit.md](../audits/07.07.2026ClaudeSonnet5MobileAudit.md) — mobile audit (2026-07-07)

@@ -11,6 +11,7 @@ import { colors } from "../constants/colors";
 import { debugLog, installGlobalErrorTrap } from "../lib/debug-logger";
 import { RuntimeConfigProvider, useRuntimeConfig } from "../lib/runtime-config";
 import { isAuthExpiredError, notifyAuthExpired } from "../lib/auth-expired";
+import { BiometricLockGate, BiometricLockProvider } from "../lib/biometric-lock";
 
 let __sideEffectsDone = false;
 
@@ -90,7 +91,8 @@ function RootLayout() {
         <SafeAreaProvider>
           <ErrorBoundary>
             <RuntimeConfigProvider>
-              <QueryClientProvider client={queryClient}>
+              <BiometricLockProvider>
+                <QueryClientProvider client={queryClient}>
                   <AuthExpiredRedirect />
                   <Stack
                     screenOptions={{
@@ -106,6 +108,8 @@ function RootLayout() {
                   </Stack>
                   <StatusBar style="light" />
                 </QueryClientProvider>
+                <BiometricLockGate />
+              </BiometricLockProvider>
             </RuntimeConfigProvider>
             </ErrorBoundary>
           </SafeAreaProvider>

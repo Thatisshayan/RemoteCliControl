@@ -9,6 +9,7 @@ import { useRuntimeConfig } from "../../lib/runtime-config";
 import { checkConnection } from "../../lib/connection-check";
 import { getVersionCompatibility } from "../../lib/version-compat";
 import { useServerStatus } from "../../lib/server-status";
+import { useBiometricLock } from "../../lib/biometric-lock";
 
 const APP_VERSION = Constants.expoConfig?.version ?? "unknown";
 
@@ -26,7 +27,7 @@ export default function SettingsScreen() {
   const [serverUrl, setServerUrl] = useState(baseUrl);
   const [tokenInput, setTokenInput] = useState(apiToken);
   const [showToken, setShowToken] = useState(false);
-  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const { biometricEnabled, setBiometricEnabled } = useBiometricLock();
   const [fontSize, setFontSizeState] = useState(12);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
@@ -43,10 +44,9 @@ export default function SettingsScreen() {
   }, [apiToken]);
 
   useEffect(() => {
-    AsyncStorage.multiGet(["biometric-lock", "terminal-font-size"]).then((values) => {
+    AsyncStorage.multiGet(["terminal-font-size"]).then((values) => {
       for (const [key, val] of values) {
         if (key === "terminal-font-size" && val) setFontSizeState(Number(val));
-        if (key === "biometric-lock") setBiometricEnabled(val === "true");
       }
     });
   }, []);
@@ -75,8 +75,7 @@ export default function SettingsScreen() {
   };
 
   const handleBiometricToggle = async (value: boolean) => {
-    setBiometricEnabled(value);
-    await AsyncStorage.setItem("biometric-lock", value ? "true" : "false");
+    await setBiometricEnabled(value);
   };
 
   const handleFontSizeChange = async (value: number) => {
@@ -188,7 +187,7 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Security</Text>
         <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>Biometric Lock (stored preference only)</Text>
+          <Text style={styles.toggleLabel}>Biometric Lock</Text>
           <Switch
             value={biometricEnabled}
             onValueChange={handleBiometricToggle}
