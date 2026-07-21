@@ -41,4 +41,15 @@ describe("authenticateWithBiometrics", () => {
     await expect(authenticateWithBiometrics()).resolves.toEqual(expect.objectContaining({ success: false }));
   });
 
+  it("keeps the app recoverably locked when the native prompt rejects", async () => {
+    mockedLocalAuthentication.hasHardwareAsync.mockResolvedValue(true);
+    mockedLocalAuthentication.isEnrolledAsync.mockResolvedValue(true);
+    mockedLocalAuthentication.authenticateAsync.mockRejectedValue(new Error("native module unavailable"));
+
+    await expect(authenticateWithBiometrics()).resolves.toEqual({
+      success: false,
+      message: "Biometric authentication could not start. Try again to unlock RemoteCTRL.",
+    });
+  });
+
 });

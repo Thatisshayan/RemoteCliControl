@@ -125,6 +125,7 @@ If `API_TOKEN` is set, the token must be sent in `sec-websocket-protocol`. Query
 - Tunnel status comes from `/tunnel-url`.
 - Server health/version come from `/health` and `/version`.
 - When enabled in Settings, biometric authentication locks the app on launch and after it returns from the background.
+- The native splash remains visible while bundled fonts load; if font loading fails, the app continues with system font fallbacks instead of showing a blank screen.
 
 ## Tunnel Ownership
 

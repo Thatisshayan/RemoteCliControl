@@ -17,24 +17,28 @@ type AuthenticationResult = { success: true } | { success: false; message: strin
 const BiometricLockContext = createContext<BiometricLockContextValue | null>(null);
 
 export async function authenticateWithBiometrics(): Promise<AuthenticationResult> {
-  if (!(await LocalAuthentication.hasHardwareAsync())) {
-    return { success: false, message: "Biometric authentication is not available on this device." };
-  }
-  if (!(await LocalAuthentication.isEnrolledAsync())) {
-    return { success: false, message: "Set up Face ID, Touch ID, or fingerprint authentication to unlock RemoteCTRL." };
-  }
+  try {
+    if (!(await LocalAuthentication.hasHardwareAsync())) {
+      return { success: false, message: "Biometric authentication is not available on this device." };
+    }
+    if (!(await LocalAuthentication.isEnrolledAsync())) {
+      return { success: false, message: "Set up Face ID, Touch ID, or fingerprint authentication to unlock RemoteCTRL." };
+    }
 
-  const result = await LocalAuthentication.authenticateAsync({
-    promptMessage: "Unlock RemoteCTRL",
-    cancelLabel: "Cancel",
-    fallbackLabel: "",
-    // A stored biometric-lock preference must not quietly downgrade to the
-    // device passcode on platforms where Expo supports disabling fallback.
-    disableDeviceFallback: true,
-  });
-  return result.success
-    ? { success: true }
-    : { success: false, message: "Authentication was not completed. Try again to unlock RemoteCTRL." };
+    const result = await LocalAuthentication.authenticateAsync({
+      promptMessage: "Unlock RemoteCTRL",
+      cancelLabel: "Cancel",
+      fallbackLabel: "",
+      // A stored biometric-lock preference must not quietly downgrade to the
+      // device passcode on platforms where Expo supports disabling fallback.
+      disableDeviceFallback: true,
+    });
+    return result.success
+      ? { success: true }
+      : { success: false, message: "Authentication was not completed. Try again to unlock RemoteCTRL." };
+  } catch {
+    return { success: false, message: "Biometric authentication could not start. Try again to unlock RemoteCTRL." };
+  }
 }
 
 export function BiometricLockProvider({ children }: { children: ReactNode }) {
@@ -84,8 +88,12 @@ export function BiometricLockGate() {
     if (!biometricEnabled || authenticationInFlight.current) return;
     authenticationInFlight.current = true;
     setLocked(true);
-    const result = await authenticateWithBiometrics();
-    authenticationInFlight.current = false;
+    let result: AuthenticationResult;
+    try {
+      result = await authenticateWithBiometrics();
+    } finally {
+      authenticationInFlight.current = false;
+    }
     if (result.success) {
       setMessage(null);
       setLocked(false);

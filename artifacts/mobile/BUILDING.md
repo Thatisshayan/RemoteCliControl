@@ -50,6 +50,10 @@ As of Friday, July 17, 2026:
 node artifacts/mobile/node_modules/typescript/bin/tsc -p artifacts/mobile/tsconfig.json --noEmit
 ```
 
+Before the next TestFlight candidate, also run the mobile Jest suite. The root
+startup test covers both successful and failed font loading so a font failure
+cannot leave the app on a blank screen.
+
 ## iOS TestFlight Releases (No EAS)
 
 iOS release builds do not use `eas build`. They run through
@@ -68,6 +72,9 @@ git tag ios-v1 && git push origin ios-v1
 ```
 
 or **Actions → iOS TestFlight → Run workflow** with `lane: beta`.
+
+Increment `expo.ios.buildNumber` for every TestFlight upload. The next
+candidate after the 2026-07-21 startup remediation is build `7`.
 
 `.github/workflows/eas-build.yml` (EAS-based) is still present and unchanged
 for Android, or for iOS if EAS usage is restored later.

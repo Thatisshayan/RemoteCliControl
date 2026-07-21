@@ -8,12 +8,15 @@ import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_7
 import * as SplashScreen from "expo-splash-screen";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { colors } from "../constants/colors";
-import { debugLog, installGlobalErrorTrap } from "../lib/debug-logger";
+import { debugLog } from "../lib/debug-logger";
 import { RuntimeConfigProvider, useRuntimeConfig } from "../lib/runtime-config";
 import { isAuthExpiredError, notifyAuthExpired } from "../lib/auth-expired";
 import { BiometricLockGate, BiometricLockProvider } from "../lib/biometric-lock";
 
-let __sideEffectsDone = false;
+// This must run at module scope. Calling it from an effect is too late: the
+// native splash can already be gone while the root still returns `null` for
+// font loading, leaving a release build on an empty screen.
+void SplashScreen.preventAutoHideAsync();
 
 // Any authenticated request (react-query query or mutation) that comes back
 // AUTH_REQUIRED/AUTH_INVALID means the saved token is no longer good — this
@@ -55,35 +58,22 @@ function AuthExpiredRedirect() {
   return null;
 }
 
-async function bootstrapBackground() {
-  if (__sideEffectsDone) return;
-  __sideEffectsDone = true;
-  debugLog("bootstrap_deferred_start", {}, "BOOT");
-  try {
-    debugLog("splash_preventAutoHide_try", {}, "BOOT");
-    await SplashScreen.preventAutoHideAsync();
-    debugLog("splash_preventAutoHide_OK", {}, "BOOT");
-  } catch (e: any) {
-    debugLog("splash_preventAutoHide_FAIL", { msg: e?.message, stack: e?.stack }, "BOOT");
-  }
-  debugLog("bootstrap_deferred_done", {}, "BOOT");
-}
-
 export default RootLayout;
 
 function RootLayout() {
   debugLog("function_render_first_time_unconditional", {}, "BOOT");
-  const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
+  const [fontsLoaded, fontError] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
 
   useEffect(() => {
-    debugLog("useEffect_post_fonts", { loaded: !!fontsLoaded }, "BOOT");
-    if (fontsLoaded) {
-      bootstrapBackground().catch((e) => debugLog("bootstrapBackground_FAIL", { msg: e?.message }, "BOOT"));
+    debugLog("useEffect_post_fonts", { loaded: !!fontsLoaded, failed: !!fontError }, "BOOT");
+    if (fontsLoaded || fontError) {
       SplashScreen.hideAsync().catch((e) => debugLog("SplashScreen_hide_FAIL", { msg: e?.message }, "BOOT"));
     }
-  }, [fontsLoaded]);
+  }, [fontError, fontsLoaded]);
 
-  if (!fontsLoaded) return null;
+  // A font failure must still show the app using system fallbacks; otherwise
+  // TestFlight users see a permanent blank screen with no recovery path.
+  if (!fontsLoaded && !fontError) return null;
 
   try {
     return (

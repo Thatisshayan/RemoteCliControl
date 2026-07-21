@@ -14,6 +14,8 @@ Date: Tuesday, July 21, 2026
 - The Expo mobile package now directly declares the SDK-compatible `babel-preset-expo`, rather than relying on Expo's transitive dependency.
 - `BiometricLockProvider` owns the stored biometric preference; `BiometricLockGate` requires biometric authentication at launch and after the app returns from the background.
 - A failed, canceled, unenrolled, or unavailable biometric check keeps the gate locked and provides a retry action. Device-passcode fallback is disabled where supported.
+- The root layout now prevents splash auto-hide at module scope and falls back to system fonts if runtime font loading fails, rather than leaving the app on an empty screen.
+- The next iOS candidate uses build number `7`; no native prebuild, archive, or TestFlight upload has been run for it.
 
 ### Verification
 
@@ -30,8 +32,9 @@ Results:
 
 - API Vitest: 19 files, 142 tests passed.
 - Mobile Jest: 9 suites, 75 tests passed.
+- Mobile Jest after the release-readiness remediation: 10 suites, 79 tests passed, including root startup tests for loaded and failed fonts.
 - Changed API server and mobile TypeScript projects passed.
-- Root `pnpm typecheck` remains blocked before compilation because the `api-zod` workspace does not have a linked `tsc`; it is recorded in the deferred-work register.
+- Root `pnpm typecheck` and `pnpm lint` passed after TypeScript was linked directly to both shared workspaces.
 
 ## Docs Updated
 

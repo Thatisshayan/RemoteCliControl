@@ -96,20 +96,18 @@ export default function TerminalScreen() {
               <Card style={styles.card}>
                 <View style={styles.cardHeader}>
                   <View style={styles.cardTitleRow}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>
-                      {renamingId === item.id ? (
-                        <TextInput
-                          style={styles.renameInput}
-                          value={renameText}
-                          onChangeText={setRenameText}
-                          onBlur={confirmRename}
-                          onSubmitEditing={confirmRename}
-                          autoFocus
-                        />
-                      ) : (
-                        item.title
-                      )}
-                    </Text>
+                    {renamingId === item.id ? (
+                      <TextInput
+                        style={styles.renameInput}
+                        value={renameText}
+                        onChangeText={setRenameText}
+                        onBlur={confirmRename}
+                        onSubmitEditing={confirmRename}
+                        autoFocus
+                      />
+                    ) : (
+                      <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
+                    )}
                   </View>
                   <TouchableOpacity onPress={() => handleClose(item.id)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                     <Feather name="x" size={18} color={colors.mutedForeground} />
