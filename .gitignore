@@ -36,3 +36,6 @@ build/
 .vs/
 desktop.ini
 audits/private/
+
+# Hermes local token cache (never commit)
+.tokensave/
