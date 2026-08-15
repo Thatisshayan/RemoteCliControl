@@ -3,7 +3,7 @@ import { render } from "@testing-library/react-native";
 
 const mockUseFonts = jest.fn();
 jest.mock("expo-splash-screen", () => ({
-  preventAutoHideAsync: jest.fn(),
+  preventAutoHideAsync: jest.fn().mockResolvedValue(undefined),
   hideAsync: jest.fn(),
 }));
 
