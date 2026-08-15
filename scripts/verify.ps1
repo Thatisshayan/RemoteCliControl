@@ -6,11 +6,11 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Set-Location $RepoRoot
 
 $failed = $false
-function Notice($t,$m){ Write-Host "::notice title=$t::$m" }
-function Err($t,$m){ Write-Host "::error title=$t::$m"; $script:failed = $true }
+function Notice($t,$m){ Write-Output "::notice title=$t::$m" }
+function Err($t,$m){ Write-Output "::error title=$t::$m"; $script:failed = $true }
 
 # ---------------------------------------------------------------- 1. secret-scan
-Write-Host "== secret-scan =="
+Write-Output "== secret-scan =="
 if (Get-Command gitleaks -ErrorAction SilentlyContinue) {
   gitleaks detect --no-banner --redact
   if ($LASTEXITCODE -ne 0) { Err "secret-scan" "gitleaks found secrets" }
@@ -35,7 +35,7 @@ if (Get-Command gitleaks -ErrorAction SilentlyContinue) {
 }
 
 # ---------------------------------------------------------------- 2. doc-freshness
-Write-Host "== doc-freshness =="
+Write-Output "== doc-freshness =="
 if (-not (Test-Path (Join-Path $RepoRoot 'README.md'))) { Err "doc-freshness" "README.md missing" }
 $newest = Get-ChildItem -Path (Join-Path $RepoRoot 'audits') -Recurse -Filter *.md -ErrorAction SilentlyContinue |
   Where-Object { $_.FullName -notmatch '[\\/]audits[\\/]private[\\/]' } |
@@ -60,7 +60,7 @@ $cur = (Get-ChildItem -Path (Join-Path $RepoRoot 'docs') -Recurse -Filter *.md -
 if ($cur -lt $base) { Err "doc-freshness" "docs md count $cur < baseline $base (deletion without approval)" }
 
 # ---------------------------------------------------------------- 3. build / test (adaptive)
-Write-Host "== build / test =="
+Write-Output "== build / test =="
 $PM = $null
 if (Test-Path (Join-Path $RepoRoot 'pnpm-lock.yaml')) { $PM = 'pnpm' }
 elseif (Test-Path (Join-Path $RepoRoot 'yarn.lock')) { $PM = 'yarn' }
@@ -82,10 +82,10 @@ if ($PM) {
   if (-not $failed) {
     foreach ($m in @('npm','pnpm','yarn')) {
       if (Get-Command $m -ErrorAction SilentlyContinue) {
-        $c = if ($m -eq 'npm') { 'npm run build --if-present' } elseif ($m -eq 'pnpm') { 'pnpm run build --if-present' } else { 'yarn build' }
-        Invoke-Expression $c >$null 2>&1; if ($LASTEXITCODE -eq 0) { Notice build "build ok" } else { Err build "build failed" }
-        $c = if ($m -eq 'npm') { 'npm test --if-present' } elseif ($m -eq 'pnpm') { 'pnpm test --if-present' } else { 'yarn test' }
-        Invoke-Expression $c >$null 2>&1; if ($LASTEXITCODE -eq 0) { Notice test "test ok" } else { Err test "test failed" }
+        $cmd, $cmdArgs = if ($m -eq 'npm') { 'npm', @('run','build','--if-present') } elseif ($m -eq 'pnpm') { 'pnpm', @('run','build','--if-present') } else { 'yarn', @('build') }
+        & $cmd @cmdArgs *> $null; if ($LASTEXITCODE -eq 0) { Notice build "build ok" } else { Err build "build failed" }
+        $cmd, $cmdArgs = if ($m -eq 'npm') { 'npm', @('test','--if-present') } elseif ($m -eq 'pnpm') { 'pnpm', @('test','--if-present') } else { 'yarn', @('test') }
+        & $cmd @cmdArgs *> $null; if ($LASTEXITCODE -eq 0) { Notice test "test ok" } else { Err test "test failed" }
       }
     }
   }
@@ -100,7 +100,7 @@ if ($PM) {
 }
 
 # ---------------------------------------------------------------- 4. deploy-dry
-Write-Host "== deploy-dry =="
+Write-Output "== deploy-dry =="
 if (Test-Path (Join-Path $RepoRoot 'vercel.json')) {
   vercel build --dry-run; if ($LASTEXITCODE -ne 0) { Err "deploy" "vercel dry-run failed" }
 } elseif ((Test-Path (Join-Path $RepoRoot 'railway.json')) -or (Test-Path (Join-Path $RepoRoot 'railway.toml'))) {
@@ -119,7 +119,7 @@ if (Test-Path (Join-Path $RepoRoot 'vercel.json')) {
 # ROLLOUT NOTE: missing directive is a Notice (not Err) during P8 rollout so
 # repos without one yet don't red-break main. Flip to Err once every portfolio
 # repo has a linted REPO_DIRECTIVE.md (see project-sentinel P8).
-Write-Host "== directive-lint =="
+Write-Output "== directive-lint =="
 $dirFile = Join-Path $RepoRoot 'REPO_DIRECTIVE.md'
 if (-not (Test-Path $dirFile)) {
   Notice "directive-lint" "REPO_DIRECTIVE.md not present yet (required after P8 rollout)"
@@ -143,5 +143,5 @@ if (-not (Test-Path $dirFile)) {
   if (-not $orphans) { Notice "directive-lint" "all tasks trace to a defined phase/sprint/epic" }
 }
 
-if ($failed) { Write-Host "VERIFY FAILED"; exit 1 }
-Write-Host "VERIFY PASSED"
+if ($failed) { Write-Output "VERIFY FAILED"; exit 1 }
+Write-Output "VERIFY PASSED"
