@@ -39,7 +39,7 @@ router.get("/files/download", async (req: Request, res: Response, next: NextFunc
     res.setHeader("Content-Type", "application/octet-stream");
     res.setHeader("Content-Length", stat.size);
     const stream = sftp.createReadStream(filePath);
-stream.pipe(res);
+    stream.pipe(res);
     stream.on("error", (err: any) => { next(err); });
   } catch (e: any) {
     next(e);
