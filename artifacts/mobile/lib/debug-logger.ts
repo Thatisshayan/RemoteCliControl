@@ -70,7 +70,15 @@ export function installConsoleErrorTrap() {
   const original = g.console.error.bind(g.console);
   const wrapped = (...args: unknown[]) => {
     persistConsoleError(args);
-    original(...args);
+    // In dev, forward to the original so Metro/LogBox behave normally.
+    // In production, DON'T: three separate TestFlight builds have shown the
+    // exact same SIGABRT originating inside RCTExceptionsManager's native
+    // bridge call (the thing console.error(...) forwards to here) — routing
+    // through it is the crash, not a side effect of it. The record above is
+    // the only copy of this error that matters in production.
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      original(...args);
+    }
   };
   wrapped.__remotectrlWrapped = true;
   g.console.error = wrapped;
@@ -143,14 +151,19 @@ export function installGlobalErrorTrap() {
   const ErrorUtils = (global as any).ErrorUtils as ErrorUtilsType | undefined;
   if (ErrorUtils && typeof ErrorUtils.setGlobalHandler === 'function') {
     const prev = ErrorUtils.getGlobalHandler?.();
+    const isDev = typeof __DEV__ !== 'undefined' && __DEV__;
     ErrorUtils.setGlobalHandler((e: Error, isFatal: boolean) => {
       const record = { kind: 'GLOBAL_JS_ERROR', name: e?.name, message: e?.message, stack: e?.stack, isFatal: !!isFatal };
       postLog('GLOBAL_JS_ERROR', record, 'GLOBAL', { isFatal: !!isFatal });
-      // Await the write before handing off to the default handler — for a
-      // fatal error that chain ends in a native abort() moments later, and a
-      // fire-and-forget AsyncStorage write can lose the race against it.
       const proceed = () => {
-        if (typeof prev === 'function') prev(e, isFatal);
+        // In dev, always forward -- this is what shows the redbox.
+        // In production, forward only non-fatal errors. Three separate
+        // TestFlight builds crashed with an identical SIGABRT inside
+        // RCTExceptionsManager's native bridge call, which is exactly what
+        // `prev` invokes for a fatal error -- forwarding it is the crash.
+        // Swallowing it here trades a hard abort() for the app staying up
+        // with the real error already persisted above.
+        if (typeof prev === 'function' && (isDev || !isFatal)) prev(e, isFatal);
       };
       if (isFatal) {
         persistFatalError(record).then(proceed, proceed);

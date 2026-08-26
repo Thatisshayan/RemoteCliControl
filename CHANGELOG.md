@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.8 (2026-08-26) — Suppress the Crashing Native Report Path
+
+### Fixed
+- **The cold-start crash itself, not just its diagnostics.** Three separate TestFlight builds (1.0.4/build 11, 1.0.6/build 12 twice) crashed with an identical `EXC_CRASH`/`SIGABRT` signature: `objc_exception_rethrow` on `com.facebook.react.ExceptionsManagerQueue`, originating via `-[NSInvocation invoke]` — a native bridge call into `RCTExceptionsManager`, not a plain JS `throw`. That queue handles both fatal-JS-error reporting and `console.error(...)` reporting to native, and evidently something about what gets marshaled across that bridge crashes reliably on this build.
+- Rather than trying to sanitize whatever data triggers it (no JS stack trace was ever recoverable to identify it precisely), `lib/debug-logger.ts` now stops forwarding to that native call in production, since the earlier diagnostics confirmed it's the actual abort site:
+  - `installGlobalErrorTrap()` — for a **fatal** JS error in production, persists it (as before) but no longer calls RN's default handler (`prev`), which is what invokes the crashing native report. Non-fatal errors and all dev-mode behavior (redbox) are unaffected.
+  - `installConsoleErrorTrap()` — `console.error(...)` still gets persisted, but in production no longer forwards to the original `console.error`, which is what reaches the same native path.
+- Net effect: the app should now survive what used to be a hard crash, with the real error already recorded in Settings → Diagnostics instead of lost to an abort with no trace.
+
 ## 1.0.7 (2026-08-26) — Console-Error Crash Trap
 
 ### Fixed
