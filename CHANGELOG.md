@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.7 (2026-08-26) — Console-Error Crash Trap
+
+### Fixed
+- **1.0.6's crash trap didn't catch it either** — build 12 (`app_version 1.0.6`) crashed with the identical signature (`EXC_CRASH`/`SIGABRT`, `objc_exception_rethrow` on `com.facebook.react.ExceptionsManagerQueue`), and `installGlobalErrorTrap()` still recorded nothing. The `lastExceptionBacktrace` origin (`objc_exception_throw` via `-[NSInvocation invoke]`) shows the exception isn't a plain uncaught JS `throw` — `ErrorUtils.setGlobalHandler` never sees it. `RCTExceptionsManager`'s queue also carries `console.error(...)` reports to native, and that path can crash on malformed arguments without ever becoming a JS "error" object.
+- `lib/debug-logger.ts` — added `installConsoleErrorTrap()`, which wraps `console.error` to persist its arguments to `AsyncStorage` before calling through to the original, independent of the fatal-JS-error trap.
+- `app/_layout.tsx` — installs the console-error trap alongside the existing one, at module scope.
+- `app/diagnostics.tsx` — added a "Last Console Error" section. Both this and "Last Fatal Error" are now always visible (showing "Loading..." / "None recorded" instead of disappearing entirely) — the previous conditional rendering made it impossible to tell "nothing captured" from "can't find the section."
+
 ## 1.0.6 (2026-08-26) — Cold-Start Crash Diagnostics
 
 ### Fixed

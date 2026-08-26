@@ -7,7 +7,7 @@ import { Feather } from "@expo/vector-icons";
 import { colors } from "../constants/colors";
 import { useRuntimeConfig } from "../lib/runtime-config";
 import { useServerStatus } from "../lib/server-status";
-import { getLastFatalError, clearLastFatalError } from "../lib/debug-logger";
+import { getLastFatalError, clearLastFatalError, getLastConsoleError, clearLastConsoleError } from "../lib/debug-logger";
 
 const APP_VERSION = Constants.expoConfig?.version ?? "unknown";
 
@@ -28,15 +28,22 @@ export default function DiagnosticsScreen() {
   const { health, tunnelStatus, mobileMinVersion, isUnreachable, isLoading, refetch } = useServerStatus(baseUrl, {
     intervalMs: 10_000,
   });
-  const [lastFatalError, setLastFatalError] = useState<string | null>(null);
+  const [lastFatalError, setLastFatalError] = useState<string | null | undefined>(undefined);
+  const [lastConsoleError, setLastConsoleError] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
     getLastFatalError().then(setLastFatalError);
+    getLastConsoleError().then(setLastConsoleError);
   }, []);
 
   const handleClearFatalError = async () => {
     await clearLastFatalError();
     setLastFatalError(null);
+  };
+
+  const handleClearConsoleError = async () => {
+    await clearLastConsoleError();
+    setLastConsoleError(null);
   };
 
   const authState = authExpired
@@ -58,6 +65,7 @@ export default function DiagnosticsScreen() {
       `Tunnel: ${tunnelStatus?.active ? tunnelStatus.tunnelUrl || "active (no URL)" : "inactive"}`,
       `App version: ${APP_VERSION}`,
       `Last fatal error: ${lastFatalError ?? "none"}`,
+      `Last console error: ${lastConsoleError ?? "none"}`,
     ];
     return lines.join("\n");
   };
@@ -119,19 +127,37 @@ export default function DiagnosticsScreen() {
           <Row label="App Version" value={APP_VERSION} />
         </View>
 
-        {lastFatalError && (
-          <>
-            <Text style={styles.sectionTitle}>Last Fatal Error</Text>
-            <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Last Fatal Error</Text>
+        <View style={styles.card}>
+          {lastFatalError ? (
+            <>
               <Text style={styles.fatalErrorText} selectable>
                 {lastFatalError}
               </Text>
               <TouchableOpacity style={styles.clearBtn} onPress={handleClearFatalError}>
                 <Text style={styles.clearBtnText}>Clear</Text>
               </TouchableOpacity>
-            </View>
-          </>
-        )}
+            </>
+          ) : (
+            <Row label="Status" value={lastFatalError === undefined ? "Loading..." : "None recorded"} />
+          )}
+        </View>
+
+        <Text style={styles.sectionTitle}>Last Console Error</Text>
+        <View style={styles.card}>
+          {lastConsoleError ? (
+            <>
+              <Text style={styles.fatalErrorText} selectable>
+                {lastConsoleError}
+              </Text>
+              <TouchableOpacity style={styles.clearBtn} onPress={handleClearConsoleError}>
+                <Text style={styles.clearBtnText}>Clear</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <Row label="Status" value={lastConsoleError === undefined ? "Loading..." : "None recorded"} />
+          )}
+        </View>
 
         <TouchableOpacity style={styles.copyBtn} onPress={handleCopy}>
           <Feather name="copy" size={16} color={colors.primaryForeground} />

@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DEBUG_SESSION_ID = 'remotectrl-cold-start-crash-2b0a26';
 const LAST_FATAL_ERROR_KEY = 'last-fatal-error';
+const LAST_CONSOLE_ERROR_KEY = 'last-console-error';
 
 // Persists regardless of __DEV__: this is the only crash record that
 // survives a TestFlight abort, since the network log below only reaches a
@@ -25,6 +26,54 @@ export async function clearLastFatalError(): Promise<void> {
   try {
     await AsyncStorage.removeItem(LAST_FATAL_ERROR_KEY);
   } catch (_) {}
+}
+
+// Separate from persistFatalError: ErrorUtils.setGlobalHandler only fires for
+// uncaught JS throws, never for console.error(...) calls. Those go through
+// RCTExceptionsManager's native reporting path too (same GCD queue that
+// showed up in the crash logs), so a malformed console.error argument can
+// crash the bridge before ever becoming a JS "error" our trap would see.
+function persistConsoleError(args: unknown[]) {
+  try {
+    const safeArgs = args.map((a) => {
+      if (a instanceof Error) return { name: a.name, message: a.message, stack: a.stack };
+      try {
+        return JSON.parse(JSON.stringify(a));
+      } catch {
+        return String(a);
+      }
+    });
+    // Fire-and-forget: console.error itself isn't the abort point (the
+    // native report of it is), so there's no race to beat here like the
+    // fatal-error case — this just needs to land before the process exits.
+    void AsyncStorage.setItem(LAST_CONSOLE_ERROR_KEY, JSON.stringify({ args: safeArgs, ts: new Date().toISOString() }));
+  } catch (_) {}
+}
+
+export async function getLastConsoleError(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(LAST_CONSOLE_ERROR_KEY);
+  } catch (_) {
+    return null;
+  }
+}
+
+export async function clearLastConsoleError(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(LAST_CONSOLE_ERROR_KEY);
+  } catch (_) {}
+}
+
+export function installConsoleErrorTrap() {
+  const g = global as any;
+  if (!g.console || typeof g.console.error !== 'function' || g.console.error.__remotectrlWrapped) return;
+  const original = g.console.error.bind(g.console);
+  const wrapped = (...args: unknown[]) => {
+    persistConsoleError(args);
+    original(...args);
+  };
+  wrapped.__remotectrlWrapped = true;
+  g.console.error = wrapped;
 }
 
 // Rig IP - phone can't hit "localhost" because that means the phone itself.

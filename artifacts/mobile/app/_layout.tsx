@@ -8,7 +8,7 @@ import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_7
 import * as SplashScreen from "expo-splash-screen";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { colors } from "../constants/colors";
-import { debugLog, installGlobalErrorTrap } from "../lib/debug-logger";
+import { debugLog, installGlobalErrorTrap, installConsoleErrorTrap } from "../lib/debug-logger";
 import { RuntimeConfigProvider, useRuntimeConfig } from "../lib/runtime-config";
 import { isAuthExpiredError, notifyAuthExpired } from "../lib/auth-expired";
 import { BiometricLockGate, BiometricLockProvider } from "../lib/biometric-lock";
@@ -25,6 +25,11 @@ void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 // the next cold-start crash into a readable record in Diagnostics instead of
 // a silent abort() with nothing to go on.
 installGlobalErrorTrap();
+// Separate trap: console.error(...) calls never reach ErrorUtils, but they
+// cross the same native bridge path that's been observed crashing in
+// production (RCTExceptionsManager's queue) — a bad argument there can abort
+// before a JS "error" ever exists for the trap above to see.
+installConsoleErrorTrap();
 
 // Any authenticated request (react-query query or mutation) that comes back
 // AUTH_REQUIRED/AUTH_INVALID means the saved token is no longer good — this
