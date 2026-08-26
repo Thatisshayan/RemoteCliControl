@@ -1,5 +1,31 @@
 // #region debug — runtime log capture for TestFlight crash debugging
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 const DEBUG_SESSION_ID = 'remotectrl-cold-start-crash-2b0a26';
+const LAST_FATAL_ERROR_KEY = 'last-fatal-error';
+
+// Persists regardless of __DEV__: this is the only crash record that
+// survives a TestFlight abort, since the network log below only reaches a
+// dev-rig LAN IP and production builds have no crash reporter wired in.
+async function persistFatalError(record: Record<string, unknown>) {
+  try {
+    await AsyncStorage.setItem(LAST_FATAL_ERROR_KEY, JSON.stringify({ ...record, ts: new Date().toISOString() }));
+  } catch (_) {}
+}
+
+export async function getLastFatalError(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(LAST_FATAL_ERROR_KEY);
+  } catch (_) {
+    return null;
+  }
+}
+
+export async function clearLastFatalError(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(LAST_FATAL_ERROR_KEY);
+  } catch (_) {}
+}
 
 // Rig IP - phone can't hit "localhost" because that means the phone itself.
 // The dev box IP is what the phone can reach. Override via env if needed.
@@ -59,14 +85,29 @@ interface ErrorUtilsType {
 }
 
 export function installGlobalErrorTrap() {
-  if (typeof __DEV__ !== 'undefined' && !__DEV__) return;
+  // Must run in every build, including production/TestFlight — this is the
+  // only thing standing between an uncaught fatal JS error and a silent
+  // abort() with zero diagnostics (see docs on the cold-start crash). Only
+  // the LAN-IP network probe inside postLog() is __DEV__-gated, not this.
+
   // Capture JS errors before React tree mounts
   const ErrorUtils = (global as any).ErrorUtils as ErrorUtilsType | undefined;
   if (ErrorUtils && typeof ErrorUtils.setGlobalHandler === 'function') {
     const prev = ErrorUtils.getGlobalHandler?.();
     ErrorUtils.setGlobalHandler((e: Error, isFatal: boolean) => {
-      postLog('GLOBAL_JS_ERROR', { name: e?.name, message: e?.message, stack: e?.stack }, 'GLOBAL', { isFatal: !!isFatal });
-      if (typeof prev === 'function') prev(e, isFatal);
+      const record = { kind: 'GLOBAL_JS_ERROR', name: e?.name, message: e?.message, stack: e?.stack, isFatal: !!isFatal };
+      postLog('GLOBAL_JS_ERROR', record, 'GLOBAL', { isFatal: !!isFatal });
+      // Await the write before handing off to the default handler — for a
+      // fatal error that chain ends in a native abort() moments later, and a
+      // fire-and-forget AsyncStorage write can lose the race against it.
+      const proceed = () => {
+        if (typeof prev === 'function') prev(e, isFatal);
+      };
+      if (isFatal) {
+        persistFatalError(record).then(proceed, proceed);
+      } else {
+        proceed();
+      }
     });
   }
 
@@ -74,7 +115,9 @@ export function installGlobalErrorTrap() {
   if (typeof global.addEventListener === 'function') {
     global.addEventListener('unhandledrejection', (e: any) => {
       const reason = e && (e.reason || e);
-      postLog('UNHANDLED_REJECTION', { message: reason?.message, stack: reason?.stack }, 'GLOBAL', { kind: typeof reason });
+      const record = { kind: 'UNHANDLED_REJECTION', message: reason?.message, stack: reason?.stack };
+      postLog('UNHANDLED_REJECTION', record, 'GLOBAL', { kind: typeof reason });
+      void persistFatalError(record);
     });
   }
   postLog('TRAP_INSTALLED', { sessionId: DEBUG_SESSION_ID, url: DEBUG_LOG_URL }, 'BOOT', null);

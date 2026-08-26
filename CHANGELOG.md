@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.6 (2026-08-26) — Cold-Start Crash Diagnostics
+
+### Fixed
+- **iOS TestFlight cold-start crash still unresolved after 1.0.5** — build 11 (`app_version 1.0.4`) crashed on real devices with `EXC_CRASH`/`SIGABRT` on the `com.facebook.react.ExceptionsManagerQueue` thread (uncaught fatal JS exception, no custom handler installed, RN's default production behavior aborts the process). The privacy-manifest fix from 1.0.5 was not sufficient on its own.
+- **`installGlobalErrorTrap()` was dead code** — defined in `lib/debug-logger.ts` but never called anywhere, and even if called, was gated off (`if (!__DEV__) return`) in production builds — the one thing built to diagnose this exact crash class could not run in the build type where the crash happens.
+- `lib/debug-logger.ts` — `installGlobalErrorTrap()` now installs in every build. On a fatal JS error or unhandled rejection it now persists the error to `AsyncStorage` (awaited before handing off to RN's default handler, to beat the abort() race) instead of only firing a `__DEV__`-only LAN network probe.
+- `app/_layout.tsx` — calls `installGlobalErrorTrap()` at module scope, before any other user code runs.
+- `app/diagnostics.tsx` — surfaces "Last Fatal Error" (persisted across the crash/relaunch) with a Clear action, and includes it in the "Copy Diagnostics to Clipboard" snapshot.
+
+This does not fix the underlying crash — it makes the next occurrence diagnosable via Settings → Diagnostics instead of leaving zero trace.
+
 ## 1.0.5 (2026-07-19) — Mobile Bug Fixes + iOS Crash Resolution
 
 ### Fixed
