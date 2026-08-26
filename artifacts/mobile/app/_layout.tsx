@@ -8,7 +8,7 @@ import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_7
 import * as SplashScreen from "expo-splash-screen";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { colors } from "../constants/colors";
-import { debugLog } from "../lib/debug-logger";
+import { debugLog, installGlobalErrorTrap } from "../lib/debug-logger";
 import { RuntimeConfigProvider, useRuntimeConfig } from "../lib/runtime-config";
 import { isAuthExpiredError, notifyAuthExpired } from "../lib/auth-expired";
 import { BiometricLockGate, BiometricLockProvider } from "../lib/biometric-lock";
@@ -20,6 +20,11 @@ import { BiometricLockGate, BiometricLockProvider } from "../lib/biometric-lock"
 // initialize) the splash lifecycle. It is an optional visual optimization,
 // never a reason to abort the JavaScript bridge before the app can render.
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
+
+// Must install before any other module-scope code runs: this is what turns
+// the next cold-start crash into a readable record in Diagnostics instead of
+// a silent abort() with nothing to go on.
+installGlobalErrorTrap();
 
 // Any authenticated request (react-query query or mutation) that comes back
 // AUTH_REQUIRED/AUTH_INVALID means the saved token is no longer good — this

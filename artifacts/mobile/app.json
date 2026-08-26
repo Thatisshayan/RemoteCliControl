@@ -2,7 +2,7 @@
   "expo": {
     "name": "RemoteCTRL",
     "slug": "remotectrl",
-    "version": "1.0.4",
+    "version": "1.0.6",
     "orientation": "portrait",
     "scheme": "remotectrl",
     "userInterfaceStyle": "dark",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.remotectrl.app",
-      "buildNumber": "7",
+      "buildNumber": "12",
       "privacyManifests": {
         "NSPrivacyTracking": false,
         "NSPrivacyTrackingDomains": [],

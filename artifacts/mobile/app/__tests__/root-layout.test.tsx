@@ -31,7 +31,7 @@ jest.mock("expo-status-bar", () => ({ StatusBar: () => null }));
 jest.mock("react-native-gesture-handler", () => ({ GestureHandlerRootView: ({ children }: { children: React.ReactNode }) => children }));
 jest.mock("react-native-safe-area-context", () => ({ SafeAreaProvider: ({ children }: { children: React.ReactNode }) => children }));
 jest.mock("../../components/ErrorBoundary", () => ({ children }: { children: React.ReactNode }) => children);
-jest.mock("../../lib/debug-logger", () => ({ debugLog: jest.fn() }));
+jest.mock("../../lib/debug-logger", () => ({ debugLog: jest.fn(), installGlobalErrorTrap: jest.fn() }));
 jest.mock("../../lib/runtime-config", () => ({
   RuntimeConfigProvider: ({ children }: { children: React.ReactNode }) => children,
   useRuntimeConfig: () => ({ authExpired: false, hydrated: true, onboardingComplete: false }),

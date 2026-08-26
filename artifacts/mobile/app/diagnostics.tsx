@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -6,6 +7,7 @@ import { Feather } from "@expo/vector-icons";
 import { colors } from "../constants/colors";
 import { useRuntimeConfig } from "../lib/runtime-config";
 import { useServerStatus } from "../lib/server-status";
+import { getLastFatalError, clearLastFatalError } from "../lib/debug-logger";
 
 const APP_VERSION = Constants.expoConfig?.version ?? "unknown";
 
@@ -26,6 +28,16 @@ export default function DiagnosticsScreen() {
   const { health, tunnelStatus, mobileMinVersion, isUnreachable, isLoading, refetch } = useServerStatus(baseUrl, {
     intervalMs: 10_000,
   });
+  const [lastFatalError, setLastFatalError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getLastFatalError().then(setLastFatalError);
+  }, []);
+
+  const handleClearFatalError = async () => {
+    await clearLastFatalError();
+    setLastFatalError(null);
+  };
 
   const authState = authExpired
     ? "Rejected — token needs re-entry"
@@ -45,6 +57,7 @@ export default function DiagnosticsScreen() {
       `Server min mobile version: ${mobileMinVersion ?? "—"}`,
       `Tunnel: ${tunnelStatus?.active ? tunnelStatus.tunnelUrl || "active (no URL)" : "inactive"}`,
       `App version: ${APP_VERSION}`,
+      `Last fatal error: ${lastFatalError ?? "none"}`,
     ];
     return lines.join("\n");
   };
@@ -106,6 +119,20 @@ export default function DiagnosticsScreen() {
           <Row label="App Version" value={APP_VERSION} />
         </View>
 
+        {lastFatalError && (
+          <>
+            <Text style={styles.sectionTitle}>Last Fatal Error</Text>
+            <View style={styles.card}>
+              <Text style={styles.fatalErrorText} selectable>
+                {lastFatalError}
+              </Text>
+              <TouchableOpacity style={styles.clearBtn} onPress={handleClearFatalError}>
+                <Text style={styles.clearBtnText}>Clear</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+
         <TouchableOpacity style={styles.copyBtn} onPress={handleCopy}>
           <Feather name="copy" size={16} color={colors.primaryForeground} />
           <Text style={styles.copyBtnText}>Copy Diagnostics to Clipboard</Text>
@@ -157,4 +184,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   copyBtnText: { color: colors.primaryForeground, fontSize: 14, fontWeight: "700", fontFamily: "Inter_700Bold" },
+  fatalErrorText: { color: colors.destructive, fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  clearBtn: { alignSelf: "flex-start", marginTop: 12 },
+  clearBtnText: { color: colors.mutedForeground, fontSize: 13, fontFamily: "Inter_500Medium", textDecorationLine: "underline" },
 });
