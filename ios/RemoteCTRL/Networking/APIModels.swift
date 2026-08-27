@@ -65,6 +65,60 @@ struct ConnectionInput: Encodable {
     let passphrase: String?
 }
 
+struct FileItem: Decodable, Identifiable {
+    let name: String
+    let path: String
+    let type: String
+    let size: Double
+    let modifiedAt: String
+    let permissions: String
+
+    var id: String { path }
+    var isDirectory: Bool { type == "directory" }
+}
+
+struct FileListResponse: Decodable {
+    let path: String
+    let items: [FileItem]
+}
+
+struct FilePathInput: Encodable {
+    let path: String
+}
+
+struct FileRenameInput: Encodable {
+    let from: String
+    let to: String
+}
+
+struct FileReadResponse: Decodable {
+    let content: String
+}
+
+struct RemoteProcess: Decodable, Identifiable {
+    let pid: Int
+    let name: String
+    let cpu: Double
+    let memory: Double
+    let status: String
+    let user: String
+
+    var id: Int { pid }
+}
+
+struct SavedCommand: Decodable, Identifiable {
+    let id: String
+    let label: String
+    let command: String
+    let description: String
+}
+
+struct NewSavedCommandInput: Encodable {
+    let label: String
+    let command: String
+    let description: String?
+}
+
 /// NamedConnectionInput is `allOf [{name}, ConnectionInput]` in the spec,
 /// i.e. a single flat JSON object -- modeled directly as one flat struct
 /// rather than trying to compose nested Encodables.
