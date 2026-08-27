@@ -22,10 +22,7 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         NSFaceIDUsageDescription: "RemoteCTRL uses Face ID to lock the app and protect your server credentials."
         NSAppTransportSecurity:
-          NSExceptionDomains:
-            trycloudflare.com:
-              NSExceptionAllowsInsecureHTTPLoads: true
-              NSIncludesSubdomains: true
+          NSAllowsArbitraryLoads: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.remotectrl.app
