@@ -67,9 +67,11 @@ for (const file of ["dist/tray.cjs", "dist/service.cjs"]) {
   await fs.writeFile(file, compatOutput);
 }
 
-const trayIconSource = path.resolve("..", "..", "ios", "RemoteCTRL", "Assets.xcassets", "AppIcon.appiconset", "icon-1024.png");
-const trayIconTarget = path.resolve("release", "tray.ico");
-const trayIconScript = `
+if (process.platform === "win32") {
+  const trayIconSource = path.resolve("..", "..", "ios", "RemoteCTRL", "Assets.xcassets", "AppIcon.appiconset", "icon-1024.png");
+  const trayIconTarget = path.resolve("release", "tray.ico");
+  await fs.mkdir(path.dirname(trayIconTarget), { recursive: true });
+  const trayIconScript = `
 Add-Type -AssemblyName System.Drawing
 $bitmap = [System.Drawing.Bitmap]::FromFile('${trayIconSource.replaceAll("'", "''")}')
 $iconHandle = $bitmap.GetHicon()
@@ -82,6 +84,9 @@ try {
 }
 `.trim();
 
-execFileSync("powershell.exe", ["-NoLogo", "-NoProfile", "-Command", trayIconScript], { stdio: "inherit" });
+  execFileSync("powershell.exe", ["-NoLogo", "-NoProfile", "-Command", trayIconScript], { stdio: "inherit" });
+} else {
+  console.log("Skipping Windows tray icon generation (not running on win32).");
+}
 
 console.log("Build complete: dist/index.mjs, dist/tray.mjs, dist/service.mjs, dist/tray.cjs, dist/service.cjs");
