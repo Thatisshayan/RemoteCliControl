@@ -134,6 +134,7 @@ jobs:
           New-Item -ItemType Directory -Force $releaseDir
           Copy-Item artifacts/api-server/release/RemoteCTRL.exe $releaseDir/
           Copy-Item artifacts/api-server/release/RemoteCTRLServer.exe $releaseDir/
+          Copy-Item artifacts/api-server/release/cloudflared.exe $releaseDir/
           New-Item -ItemType Directory -Force $releaseDir/installer
           Copy-Item artifacts/api-server/installer/Install-RemoteCTRL.ps1 $releaseDir/installer/
           Copy-Item artifacts/api-server/installer/Uninstall-RemoteCTRL.ps1 $releaseDir/installer/
@@ -142,6 +143,7 @@ jobs:
           $requiredFiles = @(
             "$releaseDir/RemoteCTRL.exe",
             "$releaseDir/RemoteCTRLServer.exe",
+            "$releaseDir/cloudflared.exe",
             "$releaseDir/README-WINDOWS.txt",
             "$releaseDir/installer/Install-RemoteCTRL.ps1",
             "$releaseDir/installer/Uninstall-RemoteCTRL.ps1"
@@ -160,8 +162,7 @@ jobs:
 
             ### Windows Desktop App
             1. Download and extract `RemoteCTRL-Windows-${{ github.ref_name }}.zip`
-            2. Download `cloudflared.exe` from https://github.com/cloudflare/cloudflared/releases and place it in the extracted folder
-            3. Double-click `RemoteCTRL.exe` — follow the first-run wizard
+            2. Double-click `RemoteCTRL.exe` — follow the first-run wizard
             4. Paste the tunnel URL into the iOS app
 
             ### iOS
