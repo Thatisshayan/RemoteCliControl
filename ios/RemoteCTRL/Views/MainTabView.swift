@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Phase 2: Connection + Terminal + Settings. Files/Processes/Commands
-/// tabs are added in Phase 3 once the SFTP/process endpoints are wired up.
+/// Phase 3: full feature set except biometric lock / push notifications /
+/// diagnostics, which land in Phase 4.
 struct MainTabView: View {
     var body: some View {
         TabView {
@@ -9,6 +9,12 @@ struct MainTabView: View {
                 .tabItem { Label("Connection", systemImage: "network") }
             SessionListView()
                 .tabItem { Label("Terminal", systemImage: "terminal") }
+            FilesView()
+                .tabItem { Label("Files", systemImage: "folder") }
+            ProcessesView()
+                .tabItem { Label("Processes", systemImage: "cpu") }
+            CommandsView()
+                .tabItem { Label("Commands", systemImage: "list.bullet.rectangle") }
             SettingsView()
                 .tabItem { Label("Settings", systemImage: "gearshape") }
         }

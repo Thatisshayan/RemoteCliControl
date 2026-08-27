@@ -58,6 +58,32 @@ final class APIClient {
         return url
     }
 
+    private func validate(_ data: Data, _ response: URLResponse) throws {
+        guard let http = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        guard (200...299).contains(http.statusCode) else {
+            let errorBody = try? JSONDecoder().decode(ServerErrorBody.self, from: data)
+            throw APIError.server(
+                status: http.statusCode,
+                code: errorBody?.code ?? "HTTP_\(http.statusCode)",
+                message: errorBody?.error ?? "Request failed with status \(http.statusCode)"
+            )
+        }
+    }
+
+    private func execute(_ request: URLRequest) async throws -> Data {
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw APIError.network(error)
+        }
+        try validate(data, response)
+        return data
+    }
+
     private func send<Body: Encodable, Response: Decodable>(
         path: String,
         method: String,
@@ -77,29 +103,52 @@ final class APIClient {
             request.httpBody = try JSONEncoder().encode(body)
         }
 
-        let data: Data
-        let response: URLResponse
-        do {
-            (data, response) = try await URLSession.shared.data(for: request)
-        } catch {
-            throw APIError.network(error)
-        }
-
-        guard let http = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        guard (200...299).contains(http.statusCode) else {
-            let errorBody = try? JSONDecoder().decode(ServerErrorBody.self, from: data)
-            throw APIError.server(
-                status: http.statusCode,
-                code: errorBody?.code ?? "HTTP_\(http.statusCode)",
-                message: errorBody?.error ?? "Request failed with status \(http.statusCode)"
-            )
-        }
+        let data = try await execute(request)
 
         do {
             return try JSONDecoder().decode(Response.self, from: data)
+        } catch {
+            throw APIError.decoding(error)
+        }
+    }
+
+    /// Raw bytes rather than a decoded JSON response -- for file downloads.
+    func getRawData(_ path: String, query: [String: String]? = nil, usesApiPrefix: Bool = true) async throws -> Data {
+        let url = try buildURL(path: path, usesApiPrefix: usesApiPrefix, query: query)
+        var request = URLRequest(url: url)
+        if let token = apiToken, !token.isEmpty {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        return try await execute(request)
+    }
+
+    /// multipart/form-data upload matching POST /api/files/upload's single
+    /// required "file" field.
+    func uploadFile(path: String, fileURL: URL) async throws -> SuccessResponse {
+        let url = try buildURL(path: "/files/upload", usesApiPrefix: true, query: ["path": path])
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        if let token = apiToken, !token.isEmpty {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        let boundary = "Boundary-\(UUID().uuidString)"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        let fileData = try Data(contentsOf: fileURL)
+        let filename = fileURL.lastPathComponent
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: application/octet-stream\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+
+        let data = try await execute(request)
+        do {
+            return try JSONDecoder().decode(SuccessResponse.self, from: data)
         } catch {
             throw APIError.decoding(error)
         }
