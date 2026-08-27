@@ -28,109 +28,26 @@ struct FilesView: View {
 
     private var currentPath: String? { pathStack.last }
 
+    // `body` intentionally stays tiny: a single base view with each
+    // presentation modifier chained on separately. Swift's type-checker
+    // previously choked ("unable to type-check this expression in
+    // reasonable time") when the NavigationStack, its content, and every
+    // alert/sheet/dialog modifier were all part of one expression --
+    // splitting into small, individually-typed properties fixes that.
     var body: some View {
-        NavigationStack {
-            Group {
-                if items.isEmpty && !isLoading {
-                    VStack(spacing: 8) {
-                        Image(systemName: "folder")
-                            .font(.system(size: 40))
-                            .foregroundStyle(.gray)
-                        Text("Empty Directory")
-                            .font(.headline)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    List {
-                        ForEach(items) { item in
-                            Button {
-                                handleTap(item)
-                            } label: {
-                                HStack {
-                                    Image(systemName: item.isDirectory ? "folder.fill" : "doc.fill")
-                                        .foregroundStyle(item.isDirectory ? .yellow : .gray)
-                                    VStack(alignment: .leading) {
-                                        Text(item.name)
-                                            .foregroundStyle(.primary)
-                                        if !item.isDirectory {
-                                            Text(formattedSize(item.size))
-                                                .font(.caption)
-                                                .foregroundStyle(.gray)
-                                        }
-                                    }
-                                    Spacer()
-                                }
-                            }
-                            .swipeActions {
-                                Button(role: .destructive) {
-                                    Task { await delete(item) }
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                                Button {
-                                    renameTarget = item
-                                    renameText = item.name
-                                } label: {
-                                    Label("Rename", systemImage: "pencil")
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            .navigationTitle(pathStack.isEmpty ? "Files" : (pathStack.last.flatMap { $0.split(separator: "/").last.map(String.init) } ?? "Files"))
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    if !pathStack.isEmpty {
-                        Button {
-                            pathStack.removeLast()
-                            Task { await load() }
-                        } label: {
-                            Image(systemName: "chevron.left")
-                        }
-                    }
-                }
-                ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    Button {
-                        showFileImporter = true
-                    } label: {
-                        if isUploading {
-                            ProgressView()
-                        } else {
-                            Image(systemName: "square.and.arrow.up")
-                        }
-                    }
-                    .disabled(isUploading)
-
-                    Button {
-                        newFolderName = ""
-                        showNewFolderPrompt = true
-                    } label: {
-                        Image(systemName: "folder.badge.plus")
-                    }
-                }
-            }
-            .task { await load() }
-            .refreshable { await load() }
-            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item], onCompletion: handleImport)
+        screen
             .alert("New Folder", isPresented: $showNewFolderPrompt) {
-                TextField("Folder name", text: $newFolderName)
-                Button("Create") { Task { await createFolder() } }
-                Button("Cancel", role: .cancel) {}
+                newFolderAlertActions
             }
             .alert("Rename", isPresented: renameAlertPresented) {
-                TextField("New name", text: $renameText)
-                Button("Rename") { Task { await rename() } }
-                Button("Cancel", role: .cancel) { renameTarget = nil }
+                renameAlertActions
             }
             .confirmationDialog(
                 actionTarget?.name ?? "",
                 isPresented: actionDialogPresented,
                 titleVisibility: .visible
             ) {
-                Button("Preview") { Task { await preview() } }
-                Button("Download & Share") { Task { await download() } }
-                Button("Cancel", role: .cancel) { actionTarget = nil }
+                actionDialogButtons
             }
             .sheet(isPresented: previewSheetPresented) {
                 previewSheet
@@ -139,11 +56,151 @@ struct FilesView: View {
                 shareSheetContent
             }
             .alert("Error", isPresented: errorAlertPresented) {
-                Button("OK") { errorMessage = nil }
+                errorAlertActions
             } message: {
-                Text(errorMessage ?? "")
+                errorAlertMessage
+            }
+    }
+
+    private var screen: some View {
+        NavigationStack {
+            fileListContent
+                .navigationTitle(navTitle)
+                .toolbar { toolbarContent }
+                .task { await load() }
+                .refreshable { await load() }
+                .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item], onCompletion: handleImport)
+        }
+    }
+
+    private var navTitle: String {
+        guard let last = pathStack.last else { return "Files" }
+        return last.split(separator: "/").last.map(String.init) ?? "Files"
+    }
+
+    @ViewBuilder
+    private var fileListContent: some View {
+        if items.isEmpty && !isLoading {
+            emptyState
+        } else {
+            fileList
+        }
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "folder")
+                .font(.system(size: 40))
+                .foregroundStyle(.gray)
+            Text("Empty Directory")
+                .font(.headline)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var fileList: some View {
+        List {
+            ForEach(items) { item in
+                fileRow(item)
             }
         }
+    }
+
+    private func fileRow(_ item: FileItem) -> some View {
+        Button {
+            handleTap(item)
+        } label: {
+            HStack {
+                Image(systemName: item.isDirectory ? "folder.fill" : "doc.fill")
+                    .foregroundStyle(item.isDirectory ? .yellow : .gray)
+                VStack(alignment: .leading) {
+                    Text(item.name)
+                        .foregroundStyle(.primary)
+                    if !item.isDirectory {
+                        Text(formattedSize(item.size))
+                            .font(.caption)
+                            .foregroundStyle(.gray)
+                    }
+                }
+                Spacer()
+            }
+        }
+        .swipeActions {
+            Button(role: .destructive) {
+                Task { await delete(item) }
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+            Button {
+                renameTarget = item
+                renameText = item.name
+            } label: {
+                Label("Rename", systemImage: "pencil")
+            }
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarLeading) {
+            if !pathStack.isEmpty {
+                Button {
+                    pathStack.removeLast()
+                    Task { await load() }
+                } label: {
+                    Image(systemName: "chevron.left")
+                }
+            }
+        }
+        ToolbarItemGroup(placement: .navigationBarTrailing) {
+            Button {
+                showFileImporter = true
+            } label: {
+                if isUploading {
+                    ProgressView()
+                } else {
+                    Image(systemName: "square.and.arrow.up")
+                }
+            }
+            .disabled(isUploading)
+
+            Button {
+                newFolderName = ""
+                showNewFolderPrompt = true
+            } label: {
+                Image(systemName: "folder.badge.plus")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var newFolderAlertActions: some View {
+        TextField("Folder name", text: $newFolderName)
+        Button("Create") { Task { await createFolder() } }
+        Button("Cancel", role: .cancel) {}
+    }
+
+    @ViewBuilder
+    private var renameAlertActions: some View {
+        TextField("New name", text: $renameText)
+        Button("Rename") { Task { await rename() } }
+        Button("Cancel", role: .cancel) { renameTarget = nil }
+    }
+
+    @ViewBuilder
+    private var actionDialogButtons: some View {
+        Button("Preview") { Task { await preview() } }
+        Button("Download & Share") { Task { await download() } }
+        Button("Cancel", role: .cancel) { actionTarget = nil }
+    }
+
+    @ViewBuilder
+    private var errorAlertActions: some View {
+        Button("OK") { errorMessage = nil }
+    }
+
+    private var errorAlertMessage: some View {
+        Text(errorMessage ?? "")
     }
 
     private var previewSheet: some View {
@@ -164,18 +221,13 @@ struct FilesView: View {
         }
     }
 
+    @ViewBuilder
     private var shareSheetContent: some View {
-        Group {
-            if let shareURL {
-                ShareSheet(items: [shareURL])
-            }
+        if let shareURL {
+            ShareSheet(items: [shareURL])
         }
     }
 
-    // Named Binding properties instead of inline `Binding(get:set:)` in the
-    // modifier chain -- with 6+ alert/sheet/dialog modifiers chained on one
-    // view, Swift's type-checker times out trying to infer the whole
-    // expression at once ("unable to type-check ... in reasonable time").
     private var renameAlertPresented: Binding<Bool> {
         Binding(get: { renameTarget != nil }, set: { if !$0 { renameTarget = nil } })
     }
