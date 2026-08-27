@@ -5,10 +5,9 @@
   "scripts": {
     "dev:server": "pnpm --filter @remotectrl/api-server dev",
     "build:server": "pnpm --filter @remotectrl/api-server build",
-    "dev:mobile": "pnpm --filter @remotectrl/mobile start",
-    "typecheck": "pnpm --filter @remotectrl/api-zod typecheck && pnpm --filter @remotectrl/api-client-react typecheck && pnpm --filter @remotectrl/api-server typecheck && pnpm --filter @remotectrl/mobile typecheck",
-    "test": "pnpm --filter @remotectrl/api-server test && pnpm --filter @remotectrl/mobile test",
-    "lint": "pnpm --filter @remotectrl/api-zod lint && pnpm --filter @remotectrl/api-client-react lint && pnpm --filter @remotectrl/api-server lint && pnpm --filter @remotectrl/mobile lint",
+    "typecheck": "pnpm --filter @remotectrl/api-zod typecheck && pnpm --filter @remotectrl/api-server typecheck",
+    "test": "pnpm --filter @remotectrl/api-server test",
+    "lint": "pnpm --filter @remotectrl/api-zod lint && pnpm --filter @remotectrl/api-server lint",
     "build": "pnpm --filter @remotectrl/api-server build"
   }
 }

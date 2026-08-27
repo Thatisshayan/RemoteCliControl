@@ -64,36 +64,6 @@ jobs:
       - run: pnpm build:server
       - run: test -f artifacts/api-server/dist/index.mjs
 
-  typecheck-mobile:
-    name: TypeCheck Mobile
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "pnpm"
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @remotectrl/mobile tsc --noEmit
-
-  test-mobile:
-    name: Test Mobile
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "pnpm"
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @remotectrl/mobile test
-
   windows-workspace:
     name: Windows Workspace Check
     runs-on: windows-latest
@@ -113,56 +83,10 @@ jobs:
       - run: test -f artifacts/api-server/dist/index.mjs
         shell: bash
 
-  eas-build:
-    name: EAS Build (iOS)
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [lint, test, build-server, typecheck-mobile, test-mobile, windows-workspace]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "pnpm"
-      - run: pnpm install --frozen-lockfile
-      - name: Install EAS CLI
-        run: npm install -g eas-cli
-      - name: EAS Build
-        run: eas build --platform ios --profile preview --non-interactive
-        working-directory: artifacts/mobile
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-
-  eas-submit:
-    name: EAS Submit (TestFlight)
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [eas-build]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "pnpm"
-      - run: pnpm install --frozen-lockfile
-      - name: Install EAS CLI
-        run: npm install -g eas-cli
-      - name: EAS Submit
-        run: eas submit --platform ios --profile preview --non-interactive
-        working-directory: artifacts/mobile
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-
   windows-release:
     name: Windows Release (.exe)
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [lint, test, build-server, typecheck-mobile, test-mobile, windows-workspace]
+    needs: [lint, test, build-server, windows-workspace]
     runs-on: windows-latest
     permissions:
       contents: write
@@ -206,14 +130,14 @@ jobs:
             4. Paste the tunnel URL into the iOS app
 
             ### iOS
-            Available on TestFlight — see the EAS build job for the link.
+            Available on TestFlight — see the iOS TestFlight workflow for the link.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   slack-notify:
     name: Slack Notification
     if: always()
-    needs: [lint, test, build-server, typecheck-mobile, test-mobile, windows-workspace]
+    needs: [lint, test, build-server, windows-workspace]
     runs-on: ubuntu-latest
     steps:
       - uses: slackapi/slack-github-action@v2
@@ -261,8 +185,6 @@ jobs:
                         { "type": "mrkdwn", "text": "*lint (Node 20/22):* ${{ needs.lint.result == 'success' && ':white_check_mark:' || ':x:' }}" },
                         { "type": "mrkdwn", "text": "*test (Node 20/22):* ${{ needs.test.result == 'success' && ':white_check_mark:' || ':x:' }}" },
                         { "type": "mrkdwn", "text": "*build-server (Node 20/22):* ${{ needs.build-server.result == 'success' && ':white_check_mark:' || ':x:' }}" },
-                        { "type": "mrkdwn", "text": "*typecheck-mobile:* ${{ needs.typecheck-mobile.result == 'success' && ':white_check_mark:' || ':x:' }}" },
-                        { "type": "mrkdwn", "text": "*test-mobile:* ${{ needs.test-mobile.result == 'success' && ':white_check_mark:' || ':x:' }}" },
                         { "type": "mrkdwn", "text": "*windows-workspace:* ${{ needs.windows-workspace.result == 'success' && ':white_check_mark:' || ':x:' }}" }
                       ]
                     }

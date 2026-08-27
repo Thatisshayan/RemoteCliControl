@@ -27,37 +27,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
+      - name: Install XcodeGen
+        run: brew install xcodegen
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: "pnpm"
-
-      - name: Install workspace dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Prebuild native iOS project (no EAS)
-        working-directory: ./artifacts/mobile
-        run: npx expo prebuild --platform ios --no-install --clean
-
-      - name: Copy fastlane config into the generated iOS project
-        run: |
-          cp ios/Gemfile artifacts/mobile/ios/Gemfile
-          cp -r ios/fastlane artifacts/mobile/ios/fastlane
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
 
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
           bundler-cache: true
-          working-directory: artifacts/mobile/ios
-
-      - name: Install CocoaPods dependencies
-        working-directory: artifacts/mobile/ios
-        run: pod install
+          working-directory: ios
 
       - name: Derive match git auth from the workflow token
         id: match_auth
@@ -67,7 +48,7 @@ jobs:
           echo "auth=$AUTH" >> "$GITHUB_OUTPUT"
 
       - name: Run fastlane
-        working-directory: artifacts/mobile/ios
+        working-directory: ios
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
