@@ -112,54 +112,33 @@ struct FilesView: View {
             }
             .task { await load() }
             .refreshable { await load() }
-            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item]) { result in
-                if case .success(let url) = result {
-                    Task { await upload(from: url) }
-                }
-            }
+            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item], onCompletion: handleImport)
             .alert("New Folder", isPresented: $showNewFolderPrompt) {
                 TextField("Folder name", text: $newFolderName)
                 Button("Create") { Task { await createFolder() } }
                 Button("Cancel", role: .cancel) {}
             }
-            .alert("Rename", isPresented: Binding(
-                get: { renameTarget != nil },
-                set: { if !$0 { renameTarget = nil } }
-            )) {
+            .alert("Rename", isPresented: renameAlertPresented) {
                 TextField("New name", text: $renameText)
                 Button("Rename") { Task { await rename() } }
                 Button("Cancel", role: .cancel) { renameTarget = nil }
             }
             .confirmationDialog(
                 actionTarget?.name ?? "",
-                isPresented: Binding(
-                    get: { actionTarget != nil },
-                    set: { if !$0 { actionTarget = nil } }
-                ),
+                isPresented: actionDialogPresented,
                 titleVisibility: .visible
             ) {
                 Button("Preview") { Task { await preview() } }
                 Button("Download & Share") { Task { await download() } }
                 Button("Cancel", role: .cancel) { actionTarget = nil }
             }
-            .sheet(isPresented: Binding(
-                get: { previewContent != nil },
-                set: { if !$0 { previewContent = nil } }
-            )) {
+            .sheet(isPresented: previewSheetPresented) {
                 previewSheet
             }
-            .sheet(isPresented: Binding(
-                get: { shareURL != nil },
-                set: { if !$0 { shareURL = nil } }
-            )) {
-                if let shareURL {
-                    ShareSheet(items: [shareURL])
-                }
+            .sheet(isPresented: shareSheetPresented) {
+                shareSheetContent
             }
-            .alert("Error", isPresented: Binding(
-                get: { errorMessage != nil },
-                set: { if !$0 { errorMessage = nil } }
-            )) {
+            .alert("Error", isPresented: errorAlertPresented) {
                 Button("OK") { errorMessage = nil }
             } message: {
                 Text(errorMessage ?? "")
@@ -182,6 +161,44 @@ struct FilesView: View {
                     Button("Done") { previewContent = nil }
                 }
             }
+        }
+    }
+
+    private var shareSheetContent: some View {
+        Group {
+            if let shareURL {
+                ShareSheet(items: [shareURL])
+            }
+        }
+    }
+
+    // Named Binding properties instead of inline `Binding(get:set:)` in the
+    // modifier chain -- with 6+ alert/sheet/dialog modifiers chained on one
+    // view, Swift's type-checker times out trying to infer the whole
+    // expression at once ("unable to type-check ... in reasonable time").
+    private var renameAlertPresented: Binding<Bool> {
+        Binding(get: { renameTarget != nil }, set: { if !$0 { renameTarget = nil } })
+    }
+
+    private var actionDialogPresented: Binding<Bool> {
+        Binding(get: { actionTarget != nil }, set: { if !$0 { actionTarget = nil } })
+    }
+
+    private var previewSheetPresented: Binding<Bool> {
+        Binding(get: { previewContent != nil }, set: { if !$0 { previewContent = nil } })
+    }
+
+    private var shareSheetPresented: Binding<Bool> {
+        Binding(get: { shareURL != nil }, set: { if !$0 { shareURL = nil } })
+    }
+
+    private var errorAlertPresented: Binding<Bool> {
+        Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })
+    }
+
+    private func handleImport(_ result: Result<URL, Error>) {
+        if case .success(let url) = result {
+            Task { await upload(from: url) }
         }
     }
 
