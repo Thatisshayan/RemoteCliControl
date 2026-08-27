@@ -9,7 +9,8 @@
     "start": "node dist/index.mjs",
     "start:3000": "node -e \"process.env.PORT=3000;import('./dist/index.mjs')\"",
     "start:tray": "tsx src/tray.ts",
-    "bundle:exe": "npx @yao-pkg/pkg dist/tray.mjs --targets node20-win-x64 --out-path release/",
+    "bundle:windows": "pnpm run build && pnpm exec pkg dist/tray.cjs --targets node20-win-x64 --output release/RemoteCTRL.exe && pnpm exec pkg dist/service.cjs --targets node20-win-x64 --output release/RemoteCTRLServer.exe",
+    "sign:windows": "powershell -ExecutionPolicy Bypass -File ../../scripts/sign-windows.ps1 -ReleaseDirectory release",
     "typecheck": "tsc --noEmit",
     "lint": "pnpm run typecheck",
     "test": "vitest run",
@@ -49,7 +50,7 @@
     "vitest": "^4.1.9"
   },
   "yao-pkg": {
-    "scripts": "dist/tray.mjs",
+    "scripts": ["dist/tray.cjs", "dist/service.cjs"],
     "assets": [
       "dist/index.mjs",
       "data/**",
