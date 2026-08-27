@@ -1,13 +1,14 @@
 import SwiftUI
 
-/// Phase 1: Connection + Settings only. Terminal/Files/Processes/Commands
-/// tabs are added in later phases once the backend WebSocket/SFTP/process
-/// endpoints are wired up.
+/// Phase 2: Connection + Terminal + Settings. Files/Processes/Commands
+/// tabs are added in Phase 3 once the SFTP/process endpoints are wired up.
 struct MainTabView: View {
     var body: some View {
         TabView {
             ConnectionView()
                 .tabItem { Label("Connection", systemImage: "network") }
+            SessionListView()
+                .tabItem { Label("Terminal", systemImage: "terminal") }
             SettingsView()
                 .tabItem { Label("Settings", systemImage: "gearshape") }
         }

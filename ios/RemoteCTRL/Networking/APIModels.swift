@@ -33,6 +33,13 @@ struct TestResult: Decodable {
     let latencyMs: Double
 }
 
+struct Session: Decodable, Identifiable, Hashable {
+    let id: String
+    let title: String
+    let status: String
+    let createdAt: String
+}
+
 struct ConnectionProfileSafe: Decodable, Identifiable {
     let id: String
     let name: String
