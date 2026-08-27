@@ -160,6 +160,14 @@ secrets; the certificate publisher must also be trusted by managed Windows
 Application Control policies. Local builds can run unsigned when no certificate
 is configured.
 
+For local dev/test signing without a purchased certificate, run
+`scripts/create-dev-signing-cert.ps1` to generate and locally trust a
+self-signed code-signing certificate (current user only), then sign a build
+with `scripts/sign-windows.ps1 -CertificateThumbprint <thumbprint> -RequireSignature`.
+This validates the sign/verify pipeline and removes local "unknown publisher"
+warnings on that machine, but a self-signed cert carries no public trust or
+reputation — it must never be used to sign a real release.
+
 ## Verification
 
 As of Friday, July 17, 2026, the latest stabilization pass was verified with:

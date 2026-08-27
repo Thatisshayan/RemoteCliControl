@@ -28,3 +28,9 @@ UNINSTALL:
 Release builds are Authenticode-signed. An unsigned local build may be blocked
 by managed Windows Application Control policies; signing may also require the
 publisher certificate to be allow-listed by the device administrator.
+
+For local testing without a purchased certificate, run
+..\scripts\create-dev-signing-cert.ps1 to generate a free self-signed dev
+certificate (trusted only on this machine, for this user), then sign with
+..\scripts\sign-windows.ps1 -CertificateThumbprint <thumbprint> -RequireSignature.
+This is for local dev/test only and must never be used for a public release.
