@@ -74,6 +74,37 @@ platform :ios do
     end
   end
 
+  desc "Check TestFlight processing status of recent builds (read-only, safe)"
+  lane :check_build_status do
+    app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_content: ENV["ASC_KEY_CONTENT"],
+      is_key_content_base64: true
+    )
+
+    app = Spaceship::ConnectAPI::App.find("com.remotectrl.app")
+    UI.user_error!("Could not find app with bundle id com.remotectrl.app") unless app
+
+    builds = Spaceship::ConnectAPI::Build.all(
+      app_id: app.id,
+      sort: "-uploadedDate",
+      limit: 10,
+      includes: "buildBetaDetail,appEncryptionDeclaration"
+    )
+
+    UI.user_error!("No builds found for this app yet") if builds.empty?
+
+    builds.each do |b|
+      beta_state = b.build_beta_detail&.processing_state || "n/a"
+      UI.message(
+        "version=#{b.app_version} build=#{b.version} " \
+        "processingState=#{b.processing_state} betaProcessingState=#{beta_state} " \
+        "expired=#{b.expired} uploadedDate=#{b.uploaded_date}"
+      )
+    end
+  end
+
   desc "Revoke one certificate by its ASC resource id (pass CERT_ID env var). Irreversible."
   lane :revoke_cert do
     app_store_connect_api_key(

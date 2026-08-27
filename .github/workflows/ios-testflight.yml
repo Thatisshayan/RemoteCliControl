@@ -8,7 +8,7 @@ on:
         required: true
         default: 'beta'
         type: choice
-        options: [beta, bootstrap_certs, list_certs, revoke_cert]
+        options: [beta, bootstrap_certs, list_certs, check_build_status, revoke_cert]
       cert_id:
         description: 'ASC certificate id (only used by revoke_cert)'
         required: false
