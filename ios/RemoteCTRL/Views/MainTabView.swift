@@ -1,7 +1,10 @@
 import SwiftUI
 
-/// Phase 3: full feature set except biometric lock / push notifications /
-/// diagnostics, which land in Phase 4.
+/// Phase 4: full feature set including biometric lock (see ContentView's
+/// overlay) and diagnostics (a Settings sub-screen). Push notifications
+/// remain deferred until the App ID's Push Notifications capability is
+/// confirmed enabled -- adding the entitlement without it would break
+/// code signing.
 struct MainTabView: View {
     var body: some View {
         TabView {
@@ -22,5 +25,7 @@ struct MainTabView: View {
 }
 
 #Preview {
-    MainTabView().environmentObject(AppState())
+    MainTabView()
+        .environmentObject(AppState())
+        .environmentObject(BiometricLockManager())
 }
