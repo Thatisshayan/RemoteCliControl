@@ -96,10 +96,13 @@ platform :ios do
     UI.user_error!("No builds found for this app yet") if builds.empty?
 
     builds.each do |b|
-      beta_state = b.build_beta_detail&.processing_state || "n/a"
+      detail = b.build_beta_detail
+      internal_state = detail&.internal_build_state || "n/a"
+      external_state = detail&.external_build_state || "n/a"
       UI.message(
         "version=#{b.app_version} build=#{b.version} " \
-        "processingState=#{b.processing_state} betaProcessingState=#{beta_state} " \
+        "processingState=#{b.processing_state} " \
+        "internalBetaState=#{internal_state} externalBetaState=#{external_state} " \
         "expired=#{b.expired} uploadedDate=#{b.uploaded_date}"
       )
     end
