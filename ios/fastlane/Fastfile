@@ -90,7 +90,7 @@ platform :ios do
       app_id: app.id,
       sort: "-uploadedDate",
       limit: 10,
-      includes: "buildBetaDetail,appEncryptionDeclaration"
+      includes: "buildBetaDetail,appEncryptionDeclaration,preReleaseVersion"
     )
 
     UI.user_error!("No builds found for this app yet") if builds.empty?
@@ -99,8 +99,9 @@ platform :ios do
       detail = b.build_beta_detail
       internal_state = detail&.internal_build_state || "n/a"
       external_state = detail&.external_build_state || "n/a"
+      version = b.pre_release_version&.version || "n/a"
       UI.message(
-        "version=#{b.app_version} build=#{b.version} " \
+        "version=#{version} build=#{b.version} " \
         "processingState=#{b.processing_state} " \
         "internalBetaState=#{internal_state} externalBetaState=#{external_state} " \
         "expired=#{b.expired} uploadedDate=#{b.uploaded_date}"
