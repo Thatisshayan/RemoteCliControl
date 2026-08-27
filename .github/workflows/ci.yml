@@ -128,8 +128,10 @@ jobs:
           WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PFX_PASSWORD }}
       - name: Assemble release folder
         shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ github.ref_name }}
         run: |
-          $version = "${{ github.ref_name }}"
+          $version = $env:RELEASE_VERSION
           $releaseDir = "RemoteCTRL-Windows-$version"
           New-Item -ItemType Directory -Force $releaseDir
           Copy-Item artifacts/api-server/release/RemoteCTRL.exe $releaseDir/

@@ -15,7 +15,7 @@ const traySeparator: MenuItem = (SystrayModule as unknown as { separator?: MenuI
   ?? (Systray as typeof Systray & { separator?: MenuItem }).separator
   ?? { title: "<SEPARATOR>", tooltip: "", enabled: false };
 const trayIcon = isPackaged()
-  ? path.join(process.cwd(), "tray.ico")
+  ? path.join(path.dirname(process.execPath), "tray.ico")
   : path.join(process.cwd(), "..", "..", "ios", "RemoteCTRL", "Assets.xcassets", "AppIcon.appiconset", "icon-1024.png");
 
 async function runSetupWizard(port: number): Promise<void> {
