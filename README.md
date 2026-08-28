@@ -133,6 +133,26 @@ If `API_TOKEN` is set, the token must be sent in `sec-websocket-protocol`. Query
 - `artifacts/api-server/src/tray.ts` supervises the server process and displays status only.
 - The tray no longer spawns `cloudflared` directly.
 
+### Persistent tunnel (optional)
+
+By default `CLOUDFLARE_TUNNEL=true` starts an anonymous Cloudflare **quick tunnel** — free,
+zero-config, but the `*.trycloudflare.com` URL is random and changes every server restart, so a
+paired mobile client has to be manually re-pointed each time.
+
+To get a stable hostname instead:
+
+1. Create a tunnel in the [Cloudflare Zero Trust dashboard](https://one.dash.cloudflare.com/)
+   (Networks → Tunnels → Create a tunnel). This requires a domain in your Cloudflare account.
+2. Add a Public Hostname route pointing at `http://localhost:<PORT>`.
+3. Copy the tunnel token from the dashboard.
+4. Set `CLOUDFLARE_TUNNEL_TOKEN` and `CLOUDFLARE_TUNNEL_HOSTNAME` (the hostname from step 2) —
+   either in the "Advanced" section of the first-run setup wizard (`RemoteCTRL.exe` → setup
+   page), or directly in `data/config.json`.
+
+When both are set, `startTunnel()` (`src/lib/tunnel.ts`) runs `cloudflared tunnel run --token
+<token>` and reports the fixed hostname instead of parsing a random URL from `cloudflared`'s
+output. If only one of the two is set, it logs a warning and falls back to the quick tunnel.
+
 ## Windows Desktop App
 
 The Windows release contains two executables:

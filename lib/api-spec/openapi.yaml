@@ -72,6 +72,12 @@ paths:
                   type: string
                 CLOUDFLARE_TUNNEL:
                   type: boolean
+                CLOUDFLARE_TUNNEL_TOKEN:
+                  type: string
+                  description: Optional persistent Cloudflare Tunnel token (from the Zero Trust dashboard). Requires CLOUDFLARE_TUNNEL_HOSTNAME to also be set.
+                CLOUDFLARE_TUNNEL_HOSTNAME:
+                  type: string
+                  description: Public hostname routed to the tunnel above. Requires CLOUDFLARE_TUNNEL_TOKEN to also be set.
       responses:
         "200":
           description: Setup result with generated API token

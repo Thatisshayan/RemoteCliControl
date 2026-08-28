@@ -6,6 +6,12 @@ export interface AppConfig {
   PORT: number;
   API_TOKEN: string;
   CLOUDFLARE_TUNNEL: boolean;
+  // Optional: a persistent Cloudflare Tunnel (created in the Cloudflare Zero
+  // Trust dashboard) instead of the default ephemeral trycloudflare.com quick
+  // tunnel. Requires a domain in the same Cloudflare account. When unset, the
+  // server falls back to the quick tunnel.
+  CLOUDFLARE_TUNNEL_TOKEN?: string;
+  CLOUDFLARE_TUNNEL_HOSTNAME?: string;
 }
 
 const CONFIG_PATH = path.join(process.cwd(), "data", "config.json");

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Added:** optional persistent Cloudflare Tunnel support (`CLOUDFLARE_TUNNEL_TOKEN` +
+  `CLOUDFLARE_TUNNEL_HOSTNAME`), so the server can use a stable hostname from a named tunnel
+  created in the Cloudflare Zero Trust dashboard instead of a random `trycloudflare.com` URL
+  that changes on every restart. Falls back to the existing quick tunnel when unset. Configurable
+  via the setup wizard's new "Advanced" section or directly in `data/config.json`.
+
 - **Windows desktop:** separate the headless boot-startup server from the interactive tray app.
 - **Windows desktop:** replace the Node-dependent service installer with self-contained PowerShell Scheduled Task installers.
 - **Windows desktop:** propagate the persisted port, API token, and tunnel setting consistently to tray and boot-startup server processes.
