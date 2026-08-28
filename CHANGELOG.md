@@ -5,6 +5,12 @@
 - **Windows desktop:** separate the headless boot-startup server from the interactive tray app.
 - **Windows desktop:** replace the Node-dependent service installer with self-contained PowerShell Scheduled Task installers.
 - **Windows desktop:** propagate the persisted port, API token, and tunnel setting consistently to tray and boot-startup server processes.
+- **Windows desktop:** Windows builds now auto-download and SHA-256-verify `cloudflared.exe` and bundle it into the release, instead of requiring a manual download step after install.
+- **Windows desktop:** added `scripts/create-dev-signing-cert.ps1` — a free, local, self-signed code-signing cert for dev/test builds, verified end-to-end against `scripts/sign-windows.ps1`. Does not replace a purchased CA certificate, which is still required for public releases.
+- **Fixed:** `build.mjs` crashed CI on Linux and on a fresh Windows runner by unconditionally shelling out to `powershell.exe` to generate the tray icon; it's now Windows-only and creates its output directory first.
+- **Security fix:** `Install-RemoteCTRL.ps1` registered its SYSTEM boot-startup task against an executable in a user-writable folder, allowing local privilege escalation via file replacement. It now copies the runtime into an ACL-locked `%ProgramData%\RemoteCTRL` directory (SYSTEM + Administrators only) before registering the task; `Uninstall-RemoteCTRL.ps1` cleans that directory up.
+- **Security fix:** the Windows release workflow interpolated `${{ github.ref_name }}` directly into a PowerShell script block; it's now passed through `env:` to avoid tag-name script injection.
+- **Fixed:** packaged `tray.ts` resolved its icon path via `process.cwd()`, which isn't reliable depending on how the exe is launched; it now uses `path.dirname(process.execPath)`.
 
 ## 1.0.8 (2026-08-26) — Suppress the Crashing Native Report Path
 
