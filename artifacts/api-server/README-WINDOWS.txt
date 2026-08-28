@@ -11,9 +11,26 @@ Step 3: Done. The server runs in the background.
          Right-click the tray icon to restart, stop, or see the URL again.
 
 OPTIONAL - Auto-start on Windows boot (even without logging in):
-  Right-click installer/install-service.js -> Run as Administrator
-  RemoteCTRL will now start automatically when Windows starts.
+  1. Run RemoteCTRL.exe once and complete setup.
+  2. Open PowerShell as Administrator in this extracted folder.
+  3. Run:
+     powershell -ExecutionPolicy Bypass -File .\installer\Install-RemoteCTRL.ps1
+  RemoteCTRLServer.exe will now start automatically when Windows starts.
+  The system-tray icon is available only when RemoteCTRL.exe is run in a user session.
+  If Windows blocks the boot task, the installer falls back to the current user's
+  Startup folder and starts the server after sign-in.
 
 UNINSTALL:
-  Right-click installer/uninstall-service.js -> Run as Administrator
-  Then delete this folder.
+  Open PowerShell as Administrator and run:
+    powershell -ExecutionPolicy Bypass -File .\installer\Uninstall-RemoteCTRL.ps1
+  Then delete this folder if it is no longer needed.
+
+Release builds are Authenticode-signed. An unsigned local build may be blocked
+by managed Windows Application Control policies; signing may also require the
+publisher certificate to be allow-listed by the device administrator.
+
+For local testing without a purchased certificate, run
+..\scripts\create-dev-signing-cert.ps1 to generate a free self-signed dev
+certificate (trusted only on this machine, for this user), then sign with
+..\scripts\sign-windows.ps1 -CertificateThumbprint <thumbprint> -RequireSignature.
+This is for local dev/test only and must never be used for a public release.

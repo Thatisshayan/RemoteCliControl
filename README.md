@@ -133,6 +133,41 @@ If `API_TOKEN` is set, the token must be sent in `sec-websocket-protocol`. Query
 - `artifacts/api-server/src/tray.ts` supervises the server process and displays status only.
 - The tray no longer spawns `cloudflared` directly.
 
+## Windows Desktop App
+
+The Windows release contains two executables:
+
+- `RemoteCTRL.exe` is the interactive tray app and first-run setup experience.
+- `RemoteCTRLServer.exe` is the headless server used for Windows boot startup.
+
+Run `RemoteCTRL.exe` once and complete setup before enabling startup. To start the
+headless server at Windows boot, open an elevated PowerShell window in the
+extracted release folder and run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\installer\Install-RemoteCTRL.ps1
+```
+
+If Windows blocks the system task, the installer falls back to a per-user Startup
+shortcut and starts the server after sign-in.
+
+To remove boot startup, run `Uninstall-RemoteCTRL.ps1` from the same directory.
+No Node.js installation is required on the Windows machine.
+
+Tagged Windows releases are Authenticode-signed in CI. The release workflow
+requires the `WINDOWS_SIGNING_PFX_BASE64` and `WINDOWS_SIGNING_PFX_PASSWORD`
+secrets; the certificate publisher must also be trusted by managed Windows
+Application Control policies. Local builds can run unsigned when no certificate
+is configured.
+
+For local dev/test signing without a purchased certificate, run
+`scripts/create-dev-signing-cert.ps1` to generate and locally trust a
+self-signed code-signing certificate (current user only), then sign a build
+with `scripts/sign-windows.ps1 -CertificateThumbprint <thumbprint> -RequireSignature`.
+This validates the sign/verify pipeline and removes local "unknown publisher"
+warnings on that machine, but a self-signed cert carries no public trust or
+reputation — it must never be used to sign a real release.
+
 ## Verification
 
 As of Friday, July 17, 2026, the latest stabilization pass was verified with:

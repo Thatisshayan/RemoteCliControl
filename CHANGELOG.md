@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Windows desktop:** separate the headless boot-startup server from the interactive tray app.
+- **Windows desktop:** replace the Node-dependent service installer with self-contained PowerShell Scheduled Task installers.
+- **Windows desktop:** propagate the persisted port, API token, and tunnel setting consistently to tray and boot-startup server processes.
+
 ## 1.0.8 (2026-08-26) — Suppress the Crashing Native Report Path
 
 ### Fixed

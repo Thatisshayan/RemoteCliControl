@@ -82,6 +82,14 @@ jobs:
       - run: pnpm build:server
       - run: test -f artifacts/api-server/dist/index.mjs
         shell: bash
+      - run: test -f artifacts/api-server/dist/tray.mjs
+        shell: bash
+      - run: test -f artifacts/api-server/dist/service.mjs
+        shell: bash
+      - run: test -f artifacts/api-server/dist/tray.cjs
+        shell: bash
+      - run: test -f artifacts/api-server/dist/service.cjs
+        shell: bash
 
   windows-release:
     name: Windows Release (.exe)
@@ -102,19 +110,50 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Build server
         run: pnpm build:server
-      - name: Bundle .exe with pkg
-        run: npx --yes @yao-pkg/pkg dist/tray.mjs --targets node20-win-x64 --out-path release/
+      - name: Bundle desktop executables
+        run: pnpm run bundle:windows
         working-directory: artifacts/api-server
-      - name: Assemble release folder
+      - name: Import Windows signing certificate
         shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}"
+          [IO.File]::WriteAllBytes($env:WINDOWS_SIGNING_PFX_PATH, [Convert]::FromBase64String($env:WINDOWS_SIGNING_PFX_BASE64))
+        env:
+          WINDOWS_SIGNING_PFX_BASE64: ${{ secrets.WINDOWS_SIGNING_PFX_BASE64 }}
+          WINDOWS_SIGNING_PFX_PATH: ${{ runner.temp }}\remotectrl-signing.pfx
+      - name: Sign desktop executables
+        shell: pwsh
+        run: .\scripts\sign-windows.ps1 -ReleaseDirectory artifacts/api-server/release -RequireSignature
+        env:
+          WINDOWS_SIGNING_PFX_PATH: ${{ runner.temp }}\remotectrl-signing.pfx
+          WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PFX_PASSWORD }}
+      - name: Assemble release folder
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          $version = $env:RELEASE_VERSION
           $releaseDir = "RemoteCTRL-Windows-$version"
           New-Item -ItemType Directory -Force $releaseDir
-          Copy-Item artifacts/api-server/release/RemoteCTRL.exe $releaseDir/ -ErrorAction SilentlyContinue
-          Copy-Item artifacts/api-server/installer $releaseDir/installer -Recurse
+          Copy-Item artifacts/api-server/release/RemoteCTRL.exe $releaseDir/
+          Copy-Item artifacts/api-server/release/RemoteCTRLServer.exe $releaseDir/
+          Copy-Item artifacts/api-server/release/cloudflared.exe $releaseDir/
+          New-Item -ItemType Directory -Force $releaseDir/installer
+          Copy-Item artifacts/api-server/installer/Install-RemoteCTRL.ps1 $releaseDir/installer/
+          Copy-Item artifacts/api-server/installer/Uninstall-RemoteCTRL.ps1 $releaseDir/installer/
           Copy-Item artifacts/api-server/README-WINDOWS.txt $releaseDir/
           New-Item -ItemType Directory -Force $releaseDir/data
+          $requiredFiles = @(
+            "$releaseDir/RemoteCTRL.exe",
+            "$releaseDir/RemoteCTRLServer.exe",
+            "$releaseDir/cloudflared.exe",
+            "$releaseDir/README-WINDOWS.txt",
+            "$releaseDir/installer/Install-RemoteCTRL.ps1",
+            "$releaseDir/installer/Uninstall-RemoteCTRL.ps1"
+          )
+          $missingFiles = $requiredFiles | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) }
+          if ($missingFiles) {
+            throw "Windows release is incomplete: $($missingFiles -join ', ')"
+          }
           Compress-Archive -Path $releaseDir -DestinationPath "RemoteCTRL-Windows-$version.zip"
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -125,8 +164,7 @@ jobs:
 
             ### Windows Desktop App
             1. Download and extract `RemoteCTRL-Windows-${{ github.ref_name }}.zip`
-            2. Download `cloudflared.exe` from https://github.com/cloudflare/cloudflared/releases and place it in the extracted folder
-            3. Double-click `RemoteCTRL.exe` — follow the first-run wizard
+            2. Double-click `RemoteCTRL.exe` — follow the first-run wizard
             4. Paste the tunnel URL into the iOS app
 
             ### iOS
