@@ -37,13 +37,21 @@ router.post("/init", (req, res) => {
     return;
   }
 
-  const { PORT, API_TOKEN, CLOUDFLARE_TUNNEL } = req.body || {};
+  const { PORT, API_TOKEN, CLOUDFLARE_TUNNEL, CLOUDFLARE_TUNNEL_TOKEN, CLOUDFLARE_TUNNEL_HOSTNAME } = req.body || {};
   const config = createDefaultConfig();
   if (PORT && typeof PORT === "number" && PORT > 0 && PORT < 65536) {
     config.PORT = PORT;
   }
   config.API_TOKEN = typeof API_TOKEN === "string" && API_TOKEN.length > 0 ? API_TOKEN : generateToken();
   config.CLOUDFLARE_TUNNEL = CLOUDFLARE_TUNNEL !== false;
+  const trimmedTunnelToken = typeof CLOUDFLARE_TUNNEL_TOKEN === "string" ? CLOUDFLARE_TUNNEL_TOKEN.trim() : "";
+  const trimmedTunnelHostname = typeof CLOUDFLARE_TUNNEL_HOSTNAME === "string" ? CLOUDFLARE_TUNNEL_HOSTNAME.trim() : "";
+  if (trimmedTunnelToken.length > 0) {
+    config.CLOUDFLARE_TUNNEL_TOKEN = trimmedTunnelToken;
+  }
+  if (trimmedTunnelHostname.length > 0) {
+    config.CLOUDFLARE_TUNNEL_HOSTNAME = trimmedTunnelHostname;
+  }
   saveConfig(config);
 
   res.json({ ok: true, apiToken: config.API_TOKEN });
@@ -108,6 +116,21 @@ router.get("/html", (_req, res) => {
         <label for="tunnel">Enable Cloudflare Tunnel (remote access)</label>
       </div>
 
+      <details style="margin-bottom: 16px;">
+        <summary style="cursor: pointer; color: #888; font-size: 13px; margin-bottom: 12px;">Advanced: persistent tunnel (optional)</summary>
+        <p style="font-size: 12px; color: #666; margin: 8px 0;">
+          By default the tunnel URL is random and changes every restart. To use a stable
+          hostname instead, create a tunnel in the
+          <a href="https://one.dash.cloudflare.com/" target="_blank" style="color: #00ff88;">Cloudflare Zero Trust dashboard</a>
+          (requires a domain in your Cloudflare account), copy its token, and enter it below along
+          with the public hostname you routed it to.
+        </p>
+        <label for="tunnel_token">Tunnel Token</label>
+        <input type="text" id="tunnel_token" name="tunnel_token" placeholder="Optional — leave blank for a quick tunnel" />
+        <label for="tunnel_hostname">Tunnel Hostname</label>
+        <input type="text" id="tunnel_hostname" name="tunnel_hostname" placeholder="e.g. remotectrl.yourdomain.com" />
+      </details>
+
       <button type="submit" id="submitBtn">Finish Setup</button>
     </form>
     <div id="result"></div>
@@ -129,6 +152,8 @@ router.get("/html", (_req, res) => {
             PORT: parseInt(document.getElementById('port').value, 10),
             API_TOKEN: document.getElementById('api_token').value.trim(),
             CLOUDFLARE_TUNNEL: document.getElementById('tunnel').checked,
+            CLOUDFLARE_TUNNEL_TOKEN: document.getElementById('tunnel_token').value.trim(),
+            CLOUDFLARE_TUNNEL_HOSTNAME: document.getElementById('tunnel_hostname').value.trim(),
           }),
         });
         const data = await res.json();

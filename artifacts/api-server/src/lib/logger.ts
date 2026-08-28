@@ -5,7 +5,7 @@ import pino from "pino";
 // explicit path per nesting level actually used in the codebase. Add a path
 // here if a future call site logs a connection/profile object under a new
 // key name.
-const CREDENTIAL_KEYS = ["password", "privateKey", "passphrase"];
+const CREDENTIAL_KEYS = ["password", "privateKey", "passphrase", "CLOUDFLARE_TUNNEL_TOKEN"];
 const NESTED_UNDER = ["conn", "connection", "profile", "body", "req.body"];
 export const redactPaths = [
   ...CREDENTIAL_KEYS,

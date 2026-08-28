@@ -8,6 +8,16 @@ export function applyConfigToEnvironment(
   environment.PORT = String(config.PORT);
   environment.API_TOKEN = config.API_TOKEN;
   environment.CLOUDFLARE_TUNNEL = config.CLOUDFLARE_TUNNEL ? "true" : "false";
+  if (config.CLOUDFLARE_TUNNEL_TOKEN) {
+    environment.CLOUDFLARE_TUNNEL_TOKEN = config.CLOUDFLARE_TUNNEL_TOKEN;
+  } else {
+    delete environment.CLOUDFLARE_TUNNEL_TOKEN;
+  }
+  if (config.CLOUDFLARE_TUNNEL_HOSTNAME) {
+    environment.CLOUDFLARE_TUNNEL_HOSTNAME = config.CLOUDFLARE_TUNNEL_HOSTNAME;
+  } else {
+    delete environment.CLOUDFLARE_TUNNEL_HOSTNAME;
+  }
 }
 
 export function preparePackagedWorkingDirectory(): void {
