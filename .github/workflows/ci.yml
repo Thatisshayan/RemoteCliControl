@@ -113,7 +113,19 @@ jobs:
       - name: Bundle desktop executables
         run: pnpm run bundle:windows
         working-directory: artifacts/api-server
+      - name: Determine signing availability
+        id: signing
+        shell: pwsh
+        run: |
+          $hasCert = -not [string]::IsNullOrEmpty($env:WINDOWS_SIGNING_PFX_BASE64)
+          "hasCert=$hasCert" >> $env:GITHUB_OUTPUT
+          if (-not $hasCert) {
+            Write-Warning "WINDOWS_SIGNING_PFX_BASE64 is not set — this release will ship UNSIGNED executables."
+          }
+        env:
+          WINDOWS_SIGNING_PFX_BASE64: ${{ secrets.WINDOWS_SIGNING_PFX_BASE64 }}
       - name: Import Windows signing certificate
+        if: steps.signing.outputs.hasCert == 'True'
         shell: pwsh
         run: |
           [IO.File]::WriteAllBytes($env:WINDOWS_SIGNING_PFX_PATH, [Convert]::FromBase64String($env:WINDOWS_SIGNING_PFX_BASE64))
@@ -122,7 +134,18 @@ jobs:
           WINDOWS_SIGNING_PFX_PATH: ${{ runner.temp }}\remotectrl-signing.pfx
       - name: Sign desktop executables
         shell: pwsh
-        run: .\scripts\sign-windows.ps1 -ReleaseDirectory artifacts/api-server/release -RequireSignature
+        run: |
+          # RequireSignature only when a certificate is actually configured — if it
+          # IS configured, a signing failure must still fail the build loudly rather
+          # than silently shipping an unsigned artifact. If no certificate secret is
+          # set at all, this intentionally degrades to an unsigned release instead of
+          # throwing (previously: this step always required a certificate, so every
+          # tagged release failed outright until real signing secrets were added).
+          if ("${{ steps.signing.outputs.hasCert }}" -eq "True") {
+            .\scripts\sign-windows.ps1 -ReleaseDirectory artifacts/api-server/release -RequireSignature
+          } else {
+            .\scripts\sign-windows.ps1 -ReleaseDirectory artifacts/api-server/release
+          }
         env:
           WINDOWS_SIGNING_PFX_PATH: ${{ runner.temp }}\remotectrl-signing.pfx
           WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PFX_PASSWORD }}
@@ -155,20 +178,35 @@ jobs:
             throw "Windows release is incomplete: $($missingFiles -join ', ')"
           }
           Compress-Archive -Path $releaseDir -DestinationPath "RemoteCTRL-Windows-$version.zip"
+      - name: Generate release notes
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          $version = $env:RELEASE_VERSION
+          $signingNote = if ("${{ steps.signing.outputs.hasCert }}" -eq "True") {
+            "These executables are Authenticode-signed."
+          } else {
+            "**These executables are UNSIGNED** (no signing certificate is configured in CI). Windows SmartScreen or a managed device's Application Control policy may block them from running until a certificate is added."
+          }
+          @"
+          ## RemoteCTRL $version
+
+          ### Windows Desktop App
+          1. Download and extract ``RemoteCTRL-Windows-$version.zip``
+          2. Double-click ``RemoteCTRL.exe`` — follow the first-run wizard
+          3. Paste the tunnel URL into the iOS app
+
+          $signingNote
+
+          ### iOS
+          Available on TestFlight — see the iOS TestFlight workflow for the link.
+          "@ | Set-Content -Path release-notes.md -Encoding utf8
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: RemoteCTRL-Windows-${{ github.ref_name }}.zip
-          body: |
-            ## RemoteCTRL ${{ github.ref_name }}
-
-            ### Windows Desktop App
-            1. Download and extract `RemoteCTRL-Windows-${{ github.ref_name }}.zip`
-            2. Double-click `RemoteCTRL.exe` — follow the first-run wizard
-            4. Paste the tunnel URL into the iOS app
-
-            ### iOS
-            Available on TestFlight — see the iOS TestFlight workflow for the link.
+          body_path: release-notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
