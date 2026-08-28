@@ -44,11 +44,13 @@ router.post("/init", (req, res) => {
   }
   config.API_TOKEN = typeof API_TOKEN === "string" && API_TOKEN.length > 0 ? API_TOKEN : generateToken();
   config.CLOUDFLARE_TUNNEL = CLOUDFLARE_TUNNEL !== false;
-  if (typeof CLOUDFLARE_TUNNEL_TOKEN === "string" && CLOUDFLARE_TUNNEL_TOKEN.length > 0) {
-    config.CLOUDFLARE_TUNNEL_TOKEN = CLOUDFLARE_TUNNEL_TOKEN;
+  const trimmedTunnelToken = typeof CLOUDFLARE_TUNNEL_TOKEN === "string" ? CLOUDFLARE_TUNNEL_TOKEN.trim() : "";
+  const trimmedTunnelHostname = typeof CLOUDFLARE_TUNNEL_HOSTNAME === "string" ? CLOUDFLARE_TUNNEL_HOSTNAME.trim() : "";
+  if (trimmedTunnelToken.length > 0) {
+    config.CLOUDFLARE_TUNNEL_TOKEN = trimmedTunnelToken;
   }
-  if (typeof CLOUDFLARE_TUNNEL_HOSTNAME === "string" && CLOUDFLARE_TUNNEL_HOSTNAME.length > 0) {
-    config.CLOUDFLARE_TUNNEL_HOSTNAME = CLOUDFLARE_TUNNEL_HOSTNAME;
+  if (trimmedTunnelHostname.length > 0) {
+    config.CLOUDFLARE_TUNNEL_HOSTNAME = trimmedTunnelHostname;
   }
   saveConfig(config);
 

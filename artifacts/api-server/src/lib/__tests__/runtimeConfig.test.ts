@@ -47,4 +47,16 @@ describe("applyConfigToEnvironment", () => {
     expect(environment.CLOUDFLARE_TUNNEL_TOKEN).toBeUndefined();
     expect(environment.CLOUDFLARE_TUNNEL_HOSTNAME).toBeUndefined();
   });
+
+  it("clears a stale named-tunnel token/hostname already present in the environment", () => {
+    const environment: NodeJS.ProcessEnv = {
+      CLOUDFLARE_TUNNEL_TOKEN: "stale-token",
+      CLOUDFLARE_TUNNEL_HOSTNAME: "stale.example.com",
+    };
+
+    applyConfigToEnvironment({ PORT: 3000, API_TOKEN: "token", CLOUDFLARE_TUNNEL: true }, environment);
+
+    expect(environment.CLOUDFLARE_TUNNEL_TOKEN).toBeUndefined();
+    expect(environment.CLOUDFLARE_TUNNEL_HOSTNAME).toBeUndefined();
+  });
 });

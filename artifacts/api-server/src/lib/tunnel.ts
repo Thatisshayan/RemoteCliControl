@@ -89,16 +89,23 @@ function startNamedTunnel(token: string, hostname: string): Promise<string> {
         clearTimeout(startupTimeout);
         startupTimeout = null;
       }
-      if (!tunnelUrl) {
+      const hadConnected = Boolean(tunnelUrl);
+      tunnelProcess = null;
+      tunnelUrl = null;
+      if (!hadConnected) {
         logger.warn({ exitCode: code }, "Cloudflare Tunnel exited before connecting");
-        tunnelProcess = null;
         reject(new Error(`cloudflared exited with code ${code}`));
+      } else {
+        logger.warn({ exitCode: code }, "Cloudflare Tunnel process exited");
       }
     });
 
     startupTimeout = setTimeout(() => {
       if (!tunnelUrl) {
         logger.warn("Cloudflare Tunnel did not connect within 30s");
+        tunnelProcess?.kill("SIGTERM");
+        tunnelProcess = null;
+        tunnelUrl = null;
         reject(new Error("Cloudflare Tunnel did not connect within 30s"));
       }
     }, 30_000);
