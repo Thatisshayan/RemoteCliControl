@@ -89,11 +89,18 @@ await build({
 
 for (const file of ["dist/tray.cjs", "dist/service.cjs"]) {
   const output = await fs.readFile(file, "utf8");
+  // esbuild numbers its per-module `import_meta`/module-namespace aliases
+  // (import_meta, import_meta2, import_meta3, ...; import_node_module,
+  // import_module, import_module2, ...) independently in each bundled
+  // module's scope, so a literal string match only ever caught the first
+  // occurrence — every other module still crashed at runtime with
+  // "argument 'filename' must be ... Received undefined" because
+  // import.meta.url is empty in a cjs bundle. Match any numbered variant.
   const compatOutput = output
     .replaceAll('require("node:sqlite")', 'require("node" + ":sqlite")')
-    .replaceAll(
-      "(0, import_node_module.createRequire)(import_meta.url)",
-      "(0, import_node_module.createRequire)(__filename)",
+    .replace(
+      /\(0, (\w+)\.createRequire\)\(import_meta\d*\.url\)/g,
+      "(0, $1.createRequire)(process.execPath)",
     );
   await fs.writeFile(file, compatOutput);
 }
